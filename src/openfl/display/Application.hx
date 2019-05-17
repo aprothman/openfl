@@ -47,8 +47,26 @@ class Application #if lime extends LimeApplication #end
 	#if lime
 	public override function createWindow(attributes:WindowAttributes):Window
 	{
-		var window = new Window(this, attributes);
+		var window = new Window(this);
+		window.create(attributes);
 
+		initWindow(window);
+
+		return window;
+	}
+
+	public override function createWindowFrom(foreignHandle:Int):Window
+	{
+		var window = new Window(this);
+		window.createFrom(foreignHandle);
+
+		initWindow(window);
+
+		return window;
+	}
+
+	private function initWindow(window:Window):Void
+	{
 		__windows.push(window);
 		__windowByID.set(window.id, window);
 
@@ -88,8 +106,6 @@ class Application #if lime extends LimeApplication #end
 		}
 
 		onCreateWindow.dispatch(window);
-
-		return window;
 	}
 	#end
 }

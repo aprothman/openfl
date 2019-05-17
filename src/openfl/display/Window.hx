@@ -34,13 +34,35 @@ class Window #if lime extends LimeWindow #end
 	public var width:Int;
 	#end
 
-	@SuppressWarnings("checkstyle:Dynamic")
-	@:noCompletion private function new(application:Application, attributes:#if lime WindowAttributes #else Dynamic #end)
+	@:noCompletion private function new(application:Application)
 	{
 		#if lime
-		super(application, attributes);
+		super(application);
+		#end
+	}
+
+	@SuppressWarnings("checkstyle:Dynamic")
+	@:noCompletion public override function create(attributes:#if lime WindowAttributes #else Dynamic #end):Void
+	{
+		#if lime
+		super.create(attributes);
 		#end
 
+		finishInit(attributes);
+	}
+
+	@:noCompletion public override function createFrom(foreignHandle:Int):Void
+	{
+		#if lime
+		super.createFrom(foreignHandle);
+		#end
+
+		finishInit({});
+	}
+
+	@SuppressWarnings("checkstyle:Dynamic")
+	private function finishInit(attributes:#if lime WindowAttributes #else Dynamic #end):Void
+	{
 		#if (!flash && !macro)
 		#if commonjs
 		if (Reflect.hasField(attributes, "stage"))
