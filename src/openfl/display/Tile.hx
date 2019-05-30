@@ -58,6 +58,15 @@ class Tile
 	@SuppressWarnings("checkstyle:Dynamic") public var data:Dynamic;
 
 	/**
+		Indicates the height of the tile, in pixels. The height is
+		calculated based on the bounds of the tile after local transformations.
+		When you set the `height` property, the `scaleY` property
+		is adjusted accordingly.
+		If a tile has a height of zero, no change is applied
+	**/
+	public var height(get, set):Float;
+
+	/**
 		The ID of the tile to draw from the Tileset
 	**/
 	public var id(get, set):Int;
@@ -144,6 +153,15 @@ class Tile
 		Whether or not the tile object is visible.
 	**/
 	public var visible(get, set):Bool;
+
+	/**
+		Indicates the width of the tile, in pixels. The width is
+		calculated based on the bounds of the tile after local transformations.
+		When you set the `width` property, the `scaleX` property
+		is adjusted accordingly.
+		If a tile has a width of zero, no change is applied
+	**/
+	public var width(get, set):Float;
 
 	/**
 		Indicates the _x_ coordinate of the Tile instance relative
@@ -286,29 +304,16 @@ class Tile
 	**/
 	public function getBounds(targetCoordinateSpace:Tile):Rectangle
 	{
-		var result:Rectangle;
+		var result:Rectangle = new Rectangle();
 
-		if (tileset == null)
-		{
-			var parentTileset = parent.__findTileset();
-			if (parentTileset == null) return new Rectangle();
-			result = parentTileset.getRect(id);
-			if (result == null) return new Rectangle();
-		}
-		else
-		{
-			result = tileset.getRect(id);
-		}
+		__findTileRect(result);
 
-		result.x = 0;
-		result.y = 0;
-
-		// Copied from DisplayObject
+		// Copied from DisplayObject. Create the translation matrix.
 		var matrix = #if flash __tempMatrix #else Matrix.__pool.get() #end;
-		matrix.copyFrom(__getWorldTransform());
 
 		if (targetCoordinateSpace != null && targetCoordinateSpace != this)
 		{
+			matrix.copyFrom(__getWorldTransform()); // ? Is this correct?
 			var targetMatrix = #if flash new Matrix() #else Matrix.__pool.get() #end;
 
 			targetMatrix.copyFrom(targetCoordinateSpace.__getWorldTransform());
@@ -320,7 +325,22 @@ class Tile
 			Matrix.__pool.release(targetMatrix);
 			#end
 		}
+		else
+		{
+			matrix.identity();
+		}
 
+		__getBounds(result,matrix);
+
+		#if !flash
+		Matrix.__pool.release(matrix);
+		#end
+
+		return result;
+	}
+
+	@:noCompletion private function __getBounds(result:Rectangle, matrix:Matrix):Void
+	{
 		#if flash
 		function __transform(rect:Rectangle, m:Matrix):Void
 		{
@@ -358,10 +378,8 @@ class Tile
 		__transform(result, matrix);
 		#else
 		result.__transform(result, matrix);
-		Matrix.__pool.release(matrix);
 		#end
 
-		return result;
 	}
 
 	/**
@@ -396,6 +414,43 @@ class Tile
 	public function invalidate():Void
 	{
 		__setRenderDirty();
+	}
+	
+	@:noCompletion private function __findTileRect(result:Rectangle):Void
+	{
+		if (tileset == null)
+		{
+			if (parent != null)
+			{
+				var parentTileset:Tileset = parent.__findTileset();
+				if (parentTileset == null)
+				{
+					result.setTo(0,0,0,0);
+				}
+				else
+				{
+					// ? Is this a way to call getRect once without making extra vars? I don't fully grasp haxe pattern matching. Could be done with an if?
+					switch parentTileset.getRect(id)
+					{
+						case null:
+							result.setTo(0,0,0,0);
+						case not_null:
+							result.copyFrom(not_null);
+					}
+				}
+			}
+			else 
+			{
+				result.setTo(0,0,0,0);
+			}
+		}
+		else
+		{
+			result.copyFrom(tileset.getRect(id));
+		}
+
+		result.x = 0;
+		result.y = 0;
 	}
 
 	@:noCompletion private function __findTileset():Tileset
@@ -486,6 +541,30 @@ class Tile
 			__setRenderDirty();
 		}
 
+		return value;
+	}
+
+	@:noCompletion private function get_height():Float
+	{
+		var result:Rectangle = #if flash __tempRectangle #else Rectangle.__pool.get() #end;
+
+		__findTileRect(result);
+
+		__getBounds(result,matrix);
+		var h = result.height;
+		#if !flash Rectangle.__pool.release(result); #end
+		return h;
+	}
+
+	@:noCompletion private function set_height(value:Float):Float
+	{
+		var result:Rectangle = #if flash __tempRectangle #else Rectangle.__pool.get() #end;
+
+		__findTileRect(result);
+		if (result.height != 0) {
+			scaleY = value / result.height;
+		}
+		#if !flash Rectangle.__pool.release(result); #end
 		return value;
 	}
 
@@ -751,6 +830,31 @@ class Tile
 			__setRenderDirty();
 		}
 
+		return value;
+	}
+
+	@:noCompletion private function get_width():Float
+	{
+		// TODO how does pooling work with flash target?
+		var result:Rectangle = #if flash new Rectangle() #else Rectangle.__pool.get() #end;
+
+		__findTileRect(result);
+
+		__getBounds(result,matrix);
+		var w = result.width;
+		#if !flash Rectangle.__pool.release(result); #end
+		return w;
+	}
+
+	@:noCompletion private function set_width(value:Float):Float
+	{
+		var result:Rectangle = #if flash __tempRectangle #else Rectangle.__pool.get() #end;
+
+		__findTileRect(result);
+		if (result.width != 0) {
+			scaleX = value / result.width;
+		}
+		#if !flash Rectangle.__pool.release(result); #end
 		return value;
 	}
 
