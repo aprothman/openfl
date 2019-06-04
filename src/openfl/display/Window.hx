@@ -5,6 +5,7 @@ import openfl._internal.Lib;
 import lime.app.Application;
 import lime.ui.Window as LimeWindow;
 import lime.ui.WindowAttributes;
+import lime.graphics.RenderContextAttributes;
 #end
 
 /**
@@ -51,13 +52,14 @@ class Window #if lime extends LimeWindow #end
 		finishInit(attributes);
 	}
 
-	@:noCompletion public override function createFrom(foreignHandle:Int):Void
+	@SuppressWarnings("checkstyle:Dynamic")
+	@:noCompletion public override function createFrom(foreignHandle:Int, attributes:#if lime RenderContextAttributes #else Dynamic #end):Void
 	{
 		#if lime
-		super.createFrom(foreignHandle);
+		super.createFrom(foreignHandle, attributes);
 		#end
 
-		finishInit({});
+		finishInit({context: attributes});
 	}
 
 	@SuppressWarnings("checkstyle:Dynamic")
