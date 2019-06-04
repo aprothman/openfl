@@ -1,9 +1,11 @@
 package openfl.display;
 
+import lime.graphics.opengl.GLContextAttributes;
 import openfl._internal.Lib;
 #if lime
 import lime.app.Application as LimeApplication;
 import lime.ui.WindowAttributes;
+import lime.graphics.RenderContextAttributes;
 #end
 
 /**
@@ -55,10 +57,10 @@ class Application #if lime extends LimeApplication #end
 		return window;
 	}
 
-	public override function createWindowFrom(foreignHandle:Int):Window
+	public override function createWindowFrom(foreignHandle:Int, attributes:RenderContextAttributes):Window
 	{
 		var window = new Window(this);
-		window.createFrom(foreignHandle);
+		window.createFrom(foreignHandle, attributes);
 
 		initWindow(window);
 
