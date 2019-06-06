@@ -1,5 +1,8 @@
 package;
 
+#if lime
+import lime.graphics.RenderContextAttributes;
+#end
 #if macro
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -13,8 +16,10 @@ import haxe.macro.Expr;
 class ApplicationMain
 {
 	#if !macro
-	public static function main()
-	{
+	private static var _app:openfl.display.Application;
+	private static var _config:Dynamic;
+	
+	public static function main() {
 		lime.system.System.__registerEntryPoint("::APP_FILE::", create);
 
 		#if (js && html5)
@@ -26,24 +31,37 @@ class ApplicationMain
 		#end
 	}
 
-	public static function create(config):Void
-	{
-		var app = new openfl.display.Application();
+	public static function create(config):Void {
+		_app = new openfl.display.Application();
+		_config = config;
 
-		ManifestResources.init(config);
+		ManifestResources.init(_config);
 
-		app.meta["build"] = "::meta.buildNumber::";
-		app.meta["company"] = "::meta.company::";
-		app.meta["file"] = "::APP_FILE::";
-		app.meta["name"] = "::meta.title::";
-		app.meta["packageName"] = "::meta.packageName::";
-		app.meta["version"] = "::meta.version::";
+		_app.meta["build"] = "::meta.buildNumber::";
+		_app.meta["company"] = "::meta.company::";
+		_app.meta["file"] = "::APP_FILE::";
+		_app.meta["name"] = "::meta.title::";
+		_app.meta["packageName"] = "::meta.packageName::";
+		_app.meta["version"] = "::meta.version::";
 
-		::if (config.hxtelemetry != null)::#if hxtelemetry
-		app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
-		app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
+		::if (_config.hxtelemetry != null)::#if hxtelemetry
+		_app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
+		_app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
 		#end::end::
 
+		createWindows();
+		
+		var limeApp:lime.app.Application = _app;
+		limeApp.init();
+
+		var result = _app.exec();
+
+		#if (sys && !ios && !nodejs && !emscripten)
+		lime.system.System.exit(result);
+		#end
+	}
+	
+	public static function createWindows():Void {
 		#if !flash
 		::foreach windows::
 		var attributes:lime.ui.WindowAttributes = {
@@ -77,19 +95,13 @@ class ApplicationMain
 			vsync: ::vsync::
 		};
 
-		if (app.window == null)
-		{
-			if (config != null)
-			{
-				for (field in Reflect.fields(config))
-				{
-					if (Reflect.hasField(attributes, field))
-					{
-						Reflect.setField(attributes, field, Reflect.field(config, field));
-					}
-					else if (Reflect.hasField(attributes.context, field))
-					{
-						Reflect.setField(attributes.context, field, Reflect.field(config, field));
+		if (_app.window == null) {
+			if (_config != null) {
+				for (field in Reflect.fields(_config)) {
+					if (Reflect.hasField(attributes, field)) {
+						Reflect.setField(attributes, field, Reflect.field(_config, field));
+					} else if (Reflect.hasField(attributes.context, field)) {
+						Reflect.setField(attributes.context, field, Reflect.field(_config, field));
 					}
 				}
 			}
@@ -98,47 +110,105 @@ class ApplicationMain
 			lime.system.System.__parseArguments(attributes);
 			#end
 		}
+		_app.createWindow(attributes);
+		::end::
+		
+		#elseif !air
+		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
+		_app.window.frameRate = ::WIN_FPS::;
+		#end
+		
+		preload();
+	}
+	
+	#if lime
+	public static function createWindowsFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes):Void {
+		#if !flash
+		::foreach windows::
+		var attributes:lime.ui.WindowAttributes = {
+			allowHighDPI: ::allowHighDPI::,
+			alwaysOnTop: ::alwaysOnTop::,
+			borderless: ::borderless::,
+			// display: ::display::,
+			element: null,
+			frameRate: ::fps::,
+			#if !web fullscreen: ::fullscreen::, #end
+			height: ::height::,
+			hidden: #if munit true #else ::hidden:: #end,
+			maximized: ::maximized::,
+			minimized: ::minimized::,
+			parameters: ::parameters::,
+			resizable: ::resizable::,
+			title: "::title::",
+			width: ::width::,
+			x: ::x::,
+			y: ::y::,
+		};
+		if (contextAttributes == null) {
+			contextAttributes = {
+				antialiasing: ::antialiasing::,
+				background: ::background::,
+				colorDepth: ::colorDepth::,
+				depth: ::depthBuffer::,
+				hardware: ::hardware::,
+				stencil: ::stencilBuffer::,
+				type: null,
+				vsync: ::vsync::
+			}
+		}
+		attributes.context = contextAttributes;
 
-		app.createWindow(attributes);
+		if (_app.window == null) {
+			if (_config != null) {
+				for (field in Reflect.fields(_config)) {
+					if (Reflect.hasField(attributes, field)) {
+						Reflect.setField(attributes, field, Reflect.field(_config, field));
+					} else if (Reflect.hasField(attributes.context, field)) {
+						Reflect.setField(attributes.context, field, Reflect.field(_config, field));
+					}
+				}
+			}
+
+			#if sys
+			lime.system.System.__parseArguments(attributes);
+			#end
+		}
+		
+		// create window
+		_app.createWindowFrom(foreignHandle, contextAttributes);
 		::end::
 		#elseif !air
-		app.window.context.attributes.background = ::WIN_BACKGROUND::;
-		app.window.frameRate = ::WIN_FPS::;
+		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
+		_app.window.frameRate = ::WIN_FPS::;
 		#end
-
+		
+		preload();
+	}
+	#end
+	
+	private static function preload():Void {
 		var preloader = getPreloader();
-		app.preloader.onProgress.add (function(loaded, total)
-		{
+		_app.preloader.onProgress.add (function(loaded, total) {
 			@:privateAccess preloader.update(loaded, total);
 		});
-		app.preloader.onComplete.add(function()
-		{
+		_app.preloader.onComplete.add(function() {
 			@:privateAccess preloader.start();
 		});
 
-		preloader.onComplete.add(start.bind(cast(app.window, openfl.display.Window).stage));
+		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
 
-		for (library in ManifestResources.preloadLibraries)
-		{
-			app.preloader.addLibrary(library);
+		for (library in ManifestResources.preloadLibraries) {
+			_app.preloader.addLibrary(library);
 		}
 
-		for (name in ManifestResources.preloadLibraryNames)
-		{
-			app.preloader.addLibraryName(name);
+		for (name in ManifestResources.preloadLibraryNames) {
+			_app.preloader.addLibraryName(name);
 		}
 
-		app.preloader.load();
-
-		var result = app.exec();
-
-		#if (sys && !ios && !nodejs && !emscripten)
-		lime.system.System.exit(result);
-		#end
+		_app.preloader.load();
 	}
 
-	public static function start(stage:openfl.display.Stage):Void
-	{
+	public static function start(stage:openfl.display.Stage):Void {
 		#if flash
 		ApplicationMain.getEntryPoint();
 		#else
@@ -147,13 +217,10 @@ class ApplicationMain
 
 			stage.dispatchEvent(new openfl.events.Event(openfl.events.Event.RESIZE, false, false));
 
-			if (stage.window.fullscreen)
-			{
+			if (stage.window.fullscreen) {
 				stage.dispatchEvent(new openfl.events.FullScreenEvent(openfl.events.FullScreenEvent.FULL_SCREEN, false, false, true, true));
 			}
-		}
-		catch (e:Dynamic)
-		{
+		} catch (e:Dynamic) {
 			#if !display
 			stage.__handleError (e);
 			#end
@@ -162,45 +229,35 @@ class ApplicationMain
 	}
 	#end
 
-	macro public static function getEntryPoint()
-	{
+	macro public static function getEntryPoint() {
 		var hasMain = false;
 
-		switch (Context.follow(Context.getType("::APP_MAIN::")))
-		{
+		switch (Context.follow(Context.getType("::APP_MAIN::"))) {
 			case TInst(t, params):
 
 				var type = t.get();
-				for (method in type.statics.get())
-				{
-					if (method.name == "main")
-					{
+				for (method in type.statics.get()) {
+					if (method.name == "main") {
 						hasMain = true;
 						break;
 					}
 				}
 
-				if (hasMain)
-				{
+				if (hasMain) {
 					return Context.parse("@:privateAccess ::APP_MAIN::.main()", Context.currentPos());
-				}
-				else if (type.constructor != null)
-				{
+				} else if (type.constructor != null) {
 					return macro
 					{
 						var current = stage.getChildAt (0);
 
-						if (current == null || !Std.is(current, openfl.display.DisplayObjectContainer))
-						{
+						if (current == null || !Std.is(current, openfl.display.DisplayObjectContainer)) {
 							current = new openfl.display.MovieClip();
 							stage.addChild(current);
 						}
 
 						new DocumentClass(cast current);
 					};
-				}
-				else
-				{
+				} else {
 					Context.fatalError("Main class \"::APP_MAIN::\" has neither a static main nor a constructor.", Context.currentPos());
 				}
 
@@ -212,33 +269,26 @@ class ApplicationMain
 		return null;
 	}
 
-	macro public static function getPreloader()
-	{
+	macro public static function getPreloader() {
 		::if (PRELOADER_NAME != "")::
 		var type = Context.getType("::PRELOADER_NAME::");
 
-		switch (type)
-		{
+		switch (type) {
 			case TInst(classType, _):
 
 				var searchTypes = classType.get();
 
-				while (searchTypes != null)
-				{
-					if (searchTypes.pack.length == 2 && searchTypes.pack[0] == "openfl" && searchTypes.pack[1] == "display" && searchTypes.name == "Preloader")
-					{
+				while (searchTypes != null) {
+					if (searchTypes.pack.length == 2 && searchTypes.pack[0] == "openfl" && searchTypes.pack[1] == "display" && searchTypes.name == "Preloader") {
 						return macro
 						{
 							new ::PRELOADER_NAME::();
 						};
 					}
 
-					if (searchTypes.superClass != null)
-					{
+					if (searchTypes.superClass != null) {
 						searchTypes = searchTypes.superClass.t.get();
-					}
-					else
-					{
+					} else {
 						searchTypes = null;
 					}
 				}
@@ -259,8 +309,7 @@ class ApplicationMain
 	}
 
 	#if !macro
-	@:noCompletion @:dox(hide) public static function __init__()
-	{
+	@:noCompletion @:dox(hide) public static function __init__() {
 		var init = lime.app.Application;
 
 		#if neko
@@ -268,26 +317,18 @@ class ApplicationMain
 		// since Sys.programPath () isn't available in __init__
 		var sys_program_path = {
 			var m = neko.vm.Module.local().name;
-			try
-			{
+			try {
 				sys.FileSystem.fullPath(m);
 			}
-			catch (e:Dynamic)
-			{
+			catch (e:Dynamic) {
 				// maybe the neko module name was supplied without .n extension...
-				if (!StringTools.endsWith(m, ".n"))
-				{
-					try
-					{
+				if (!StringTools.endsWith(m, ".n")) {
+					try {
 						sys.FileSystem.fullPath(m + ".n");
-					}
-					catch (e:Dynamic)
-					{
+					} catch (e:Dynamic) {
 						m;
 					}
-				}
-				else
-				{
+				} else {
 					m;
 				}
 			}
@@ -313,10 +354,8 @@ class DocumentClass
 		var classType = Context.getLocalClass().get();
 		var searchTypes = classType;
 
-		while (searchTypes != null)
-		{
-			if (searchTypes.module == "openfl.display.DisplayObject" || searchTypes.module == "flash.display.DisplayObject")
-			{
+		while (searchTypes != null) {
+			if (searchTypes.module == "openfl.display.DisplayObject" || searchTypes.module == "flash.display.DisplayObject") {
 				var fields = Context.getBuildFields();
 
 				var method = macro
@@ -331,12 +370,9 @@ class DocumentClass
 				return fields;
 			}
 
-			if (searchTypes.superClass != null)
-			{
+			if (searchTypes.superClass != null) {
 				searchTypes = searchTypes.superClass.t.get();
-			}
-			else
-			{
+			} else {
 				searchTypes = null;
 			}
 		}
