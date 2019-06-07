@@ -18,7 +18,7 @@ class ApplicationMain
 	#if !macro
 	private static var _app:openfl.display.Application;
 	private static var _config:Dynamic;
-	
+
 	public static function main() {
 		lime.system.System.__registerEntryPoint("::APP_FILE::", create);
 
@@ -50,7 +50,7 @@ class ApplicationMain
 		#end::end::
 
 		createWindows();
-		
+
 		var limeApp:lime.app.Application = _app;
 		limeApp.init();
 
@@ -60,7 +60,7 @@ class ApplicationMain
 		lime.system.System.exit(result);
 		#end
 	}
-	
+
 	public static function createWindows():Void {
 		#if !flash
 		::foreach windows::
@@ -112,15 +112,15 @@ class ApplicationMain
 		}
 		_app.createWindow(attributes);
 		::end::
-		
+
 		#elseif !air
 		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
 		_app.window.frameRate = ::WIN_FPS::;
 		#end
-		
+
 		preload();
 	}
-	
+
 	#if lime
 	public static function createWindowsFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes):Void {
 		#if !flash
@@ -173,19 +173,20 @@ class ApplicationMain
 			lime.system.System.__parseArguments(attributes);
 			#end
 		}
-		
+
 		// create window
 		_app.createWindowFrom(foreignHandle, contextAttributes);
+		_app.window.frameRate = ::WIN_FPS::
 		::end::
 		#elseif !air
 		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
 		_app.window.frameRate = ::WIN_FPS::;
 		#end
-		
+
 		preload();
 	}
 	#end
-	
+
 	private static function preload():Void {
 		var preloader = getPreloader();
 		_app.preloader.onProgress.add (function(loaded, total) {
