@@ -176,7 +176,7 @@ class ApplicationMain
 
 		// create window
 		_app.createWindowFrom(foreignHandle, contextAttributes);
-		_app.window.frameRate = ::WIN_FPS::
+		_app.window.frameRate = ::WIN_FPS::;
 		::end::
 		#elseif !air
 		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
