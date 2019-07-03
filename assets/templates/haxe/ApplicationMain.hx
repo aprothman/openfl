@@ -1,5 +1,6 @@
 package;
 
+import lime.ui.WindowAttributes;
 #if lime
 import lime.graphics.RenderContextAttributes;
 #end
@@ -51,8 +52,7 @@ class ApplicationMain
 
 		createWindows();
 
-		var limeApp:lime.app.Application = _app;
-		limeApp.init();
+		_app.init();
 
 		var result = _app.exec();
 
@@ -64,27 +64,9 @@ class ApplicationMain
 	public static function createWindows():Void {
 		#if !flash
 		::foreach windows::
-		var attributes:lime.ui.WindowAttributes = {
-			allowHighDPI: ::allowHighDPI::,
-			alwaysOnTop: ::alwaysOnTop::,
-			borderless: ::borderless::,
-			// display: ::display::,
-			element: null,
-			frameRate: ::fps::,
-			#if !web fullscreen: ::fullscreen::, #end
-			height: ::height::,
-			hidden: #if munit true #else ::hidden:: #end,
-			maximized: ::maximized::,
-			minimized: ::minimized::,
-			parameters: ::parameters::,
-			resizable: ::resizable::,
-			title: "::title::",
-			width: ::width::,
-			x: ::x::,
-			y: ::y::,
-		};
+		var foreignHandle:Int = cast ::foreignHandle::;
 
-		attributes.context = {
+		var renderContext = {
 			antialiasing: ::antialiasing::,
 			background: ::background::,
 			colorDepth: ::colorDepth::,
@@ -95,22 +77,47 @@ class ApplicationMain
 			vsync: ::vsync::
 		};
 
-		if (_app.window == null) {
-			if (_config != null) {
-				for (field in Reflect.fields(_config)) {
-					if (Reflect.hasField(attributes, field)) {
-						Reflect.setField(attributes, field, Reflect.field(_config, field));
-					} else if (Reflect.hasField(attributes.context, field)) {
-						Reflect.setField(attributes.context, field, Reflect.field(_config, field));
+		if (0 == foreignHandle) {
+			var attributes:lime.ui.WindowAttributes = {
+				allowHighDPI: ::allowHighDPI::,
+				alwaysOnTop: ::alwaysOnTop::,
+				borderless: ::borderless::,
+				// display: ::display::,
+				element: null,
+				frameRate: ::fps::,
+				#if !web fullscreen: ::fullscreen::, #end
+				height: ::height::,
+				hidden: #if munit true #else ::hidden:: #end,
+				maximized: ::maximized::,
+				minimized: ::minimized::,
+				parameters: ::parameters::,
+				resizable: ::resizable::,
+				title: "::title::",
+				width: ::width::,
+				x: ::x::,
+				y: ::y::,
+				context: renderContext,
+			};
+
+			if (_app.window == null) {
+				if (_config != null) {
+					for (field in Reflect.fields(_config)) {
+						if (Reflect.hasField(attributes, field)) {
+							Reflect.setField(attributes, field, Reflect.field(_config, field));
+						} else if (Reflect.hasField(attributes.context, field)) {
+							Reflect.setField(attributes.context, field, Reflect.field(_config, field));
+						}
 					}
 				}
-			}
 
-			#if sys
-			lime.system.System.__parseArguments(attributes);
-			#end
+				#if sys
+				lime.system.System.__parseArguments(attributes);
+				#end
+			}
+			createWindow(attributes);
+		} else {
+			createWindowFrom(foreignHandle, renderContext, ::fps::);
 		}
-		_app.createWindow(attributes);
 		::end::
 
 		#elseif !air
@@ -119,73 +126,23 @@ class ApplicationMain
 		#end
 
 		preload();
+	}
+
+	public static function createWindow(attributes:WindowAttributes):Void {
+		_app.createWindow(attributes);
 	}
 
 	#if lime
-	public static function createWindowsFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes):Void {
-		#if !flash
-		::foreach windows::
-		var attributes:lime.ui.WindowAttributes = {
-			allowHighDPI: ::allowHighDPI::,
-			alwaysOnTop: ::alwaysOnTop::,
-			borderless: ::borderless::,
-			// display: ::display::,
-			element: null,
-			frameRate: ::fps::,
-			#if !web fullscreen: ::fullscreen::, #end
-			height: ::height::,
-			hidden: #if munit true #else ::hidden:: #end,
-			maximized: ::maximized::,
-			minimized: ::minimized::,
-			parameters: ::parameters::,
-			resizable: ::resizable::,
-			title: "::title::",
-			width: ::width::,
-			x: ::x::,
-			y: ::y::,
-		};
-		if (contextAttributes == null) {
-			contextAttributes = {
-				antialiasing: ::antialiasing::,
-				background: ::background::,
-				colorDepth: ::colorDepth::,
-				depth: ::depthBuffer::,
-				hardware: ::hardware::,
-				stencil: ::stencilBuffer::,
-				type: null,
-				vsync: ::vsync::
-			}
-		}
-		attributes.context = contextAttributes;
-
-		if (_app.window == null) {
-			if (_config != null) {
-				for (field in Reflect.fields(_config)) {
-					if (Reflect.hasField(attributes, field)) {
-						Reflect.setField(attributes, field, Reflect.field(_config, field));
-					} else if (Reflect.hasField(attributes.context, field)) {
-						Reflect.setField(attributes.context, field, Reflect.field(_config, field));
-					}
-				}
-			}
-
-			#if sys
-			lime.system.System.__parseArguments(attributes);
-			#end
-		}
-
-		// create window
-		_app.createWindowFrom(foreignHandle, contextAttributes);
-		_app.window.frameRate = ::WIN_FPS::;
-		::end::
-		#elseif !air
-		_app.window.context.attributes.background = ::WIN_BACKGROUND::;
-		_app.window.frameRate = ::WIN_FPS::;
-		#end
-
-		preload();
+	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):Void {
+		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
+		curWindow.frameRate = frameRate;
 	}
 	#end
+
+	public static function setUpApp():Void {
+		preload();
+		_app.init();
+	}
 
 	private static function preload():Void {
 		var preloader = getPreloader();
