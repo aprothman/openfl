@@ -64,7 +64,7 @@ class ApplicationMain
 	public static function createWindows():Void {
 		#if !flash
 		::foreach windows::
-		var foreignHandle:Int = cast ::foreignHandle::;
+		var foreignHandle:Null<Int> = cast ::foreignHandle::;
 
 		var renderContext = {
 			antialiasing: ::antialiasing::,
