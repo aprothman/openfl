@@ -53,7 +53,7 @@ class ApplicationMain
 		createWindows();
 
 		_app.init();
-		
+
 		var result = _app.exec();
 
 		#if (sys && !ios && !nodejs && !emscripten)
@@ -76,7 +76,7 @@ class ApplicationMain
 			type: null,
 			vsync: ::vsync::
 		};
-		
+
 		if (0 == foreignHandle || null == foreignHandle) {
 			var attributes:lime.ui.WindowAttributes = {
 				allowHighDPI: ::allowHighDPI::,
@@ -116,7 +116,9 @@ class ApplicationMain
 			}
 			createWindow(attributes);
 		} else {
+			#if lime
 			createWindowFrom(foreignHandle, renderContext, ::fps::);
+			#end
 		}
 		::end::
 
