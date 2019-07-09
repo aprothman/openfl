@@ -525,9 +525,7 @@ private class BlurAlphaShader extends BitmapFilterShader
 			a += dot(top, contributions.xyz);
             a += dot(bottom, contributions.zyx);
 
-			a *= uColor.a;
-
-			gl_FragColor = vec4(uColor.rgb, a);
+			gl_FragColor = uColor * a;
 		}
 	")
 	@:glVertexSource("
@@ -582,7 +580,7 @@ private class CombineShader extends BitmapFilterShader
 			vec4 src = texture2D(sourceBitmap, textureCoords.xy);
 			vec4 glow = texture2D(openfl_Texture, textureCoords.zw) * strength;
 
-			gl_FragColor = src + glow * (1.0 - src.a);
+			gl_FragColor = src * src.a + glow * (1.0 - src.a);
 		}
 	")
 	@:glVertexSource("attribute vec4 openfl_Position;
