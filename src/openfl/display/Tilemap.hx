@@ -11,13 +11,17 @@ import openfl._internal.renderer.cairo.CairoTilemap;
 import openfl._internal.renderer.canvas.CanvasBitmap;
 import openfl._internal.renderer.canvas.CanvasDisplayObject;
 import openfl._internal.renderer.canvas.CanvasTilemap;
+import openfl._internal.renderer.context3D.Context3DBitmap;
 import openfl._internal.renderer.context3D.Context3DBuffer;
+import openfl._internal.renderer.context3D.Context3DDisplayObject;
+import openfl._internal.renderer.context3D.Context3DTilemap;
 import openfl._internal.renderer.dom.DOMBitmap;
 import openfl._internal.renderer.dom.DOMDisplayObject;
 import openfl._internal.renderer.dom.DOMTilemap;
-import openfl._internal.renderer.context3D.Context3DBitmap;
-import openfl._internal.renderer.context3D.Context3DDisplayObject;
-import openfl._internal.renderer.context3D.Context3DTilemap;
+import openfl._internal.renderer.opengl.GLBitmap;
+import openfl._internal.renderer.opengl.GLBuffer;
+import openfl._internal.renderer.opengl.GLDisplayObject;
+import openfl._internal.renderer.opengl.GLTilemap;
 #end
 
 /**
@@ -338,6 +342,27 @@ class Tilemap extends #if !flash DisplayObject #else Bitmap implements IDisplayO
 	}
 
 	/**
+		Sorts the z-order (front-to-back order) of all the tile objects in this
+		container based on a comparison function.
+
+		A comparison function should take two arguments to compare. Given the elements
+		A and B, the result of `compareFunction` can have a negative, 0, or positive value:
+
+		* A negative return value specifies that A appears before B in the sorted sequence.
+		* A return value of 0 specifies that A and B have the same sort order.
+		* A positive return value specifies that A appears after B in the sorted sequence.
+
+		The sort operation is not guaranteed to be stable, which means that the
+		order of equal elements may not be retained.
+
+		@param	compareFunction	A comparison function to use when sorting.
+	**/
+	public function sortTiles(compareFunction:Tile->Tile->Int):Void
+	{
+		__group.sortTiles(compareFunction);
+	}
+
+	/**
 		Swaps the z-order (front-to-back order) of the two specified tile
 		objects. All other tile objects in the tile container remain in
 		the same index positions.
@@ -449,6 +474,39 @@ class Tilemap extends #if !flash DisplayObject #else Bitmap implements IDisplayO
 		__renderEvent(renderer);
 	}
 
+	@:noCompletion private override function __renderContext3D(renderer:Context3DRenderer):Void
+	{
+		__updateCacheBitmap(renderer, false);
+
+		if (__cacheBitmap != null && !__isCacheBitmapRender)
+		{
+			Context3DBitmap.render(__cacheBitmap, renderer);
+		}
+		else
+		{
+			Context3DDisplayObject.render(this, renderer);
+			Context3DTilemap.render(this, renderer);
+		}
+
+		__renderEvent(renderer);
+	}
+
+	@:noCompletion private override function __renderContext3DMask(renderer:Context3DRenderer):Void
+	{
+		// __updateCacheBitmap (renderer, false);
+
+		// if (__cacheBitmap != null && !__isCacheBitmapRender) {
+
+		// 	Context3DBitmap.renderMask (__cacheBitmap, renderer);
+
+		// } else {
+
+		Context3DDisplayObject.renderMask(this, renderer);
+		Context3DTilemap.renderMask(this, renderer);
+
+		// }
+	}
+
 	@:noCompletion private override function __renderDOM(renderer:DOMRenderer):Void
 	{
 		__updateCacheBitmap(renderer, /*!__worldColorTransform.__isDefault ()*/ false);
@@ -487,12 +545,12 @@ class Tilemap extends #if !flash DisplayObject #else Bitmap implements IDisplayO
 
 		if (__cacheBitmap != null && !__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(__cacheBitmap, renderer);
+			GLBitmap.render(__cacheBitmap, renderer);
 		}
 		else
 		{
-			Context3DDisplayObject.render(this, renderer);
-			Context3DTilemap.render(this, renderer);
+			GLDisplayObject.render(this, renderer);
+			GLTilemap.render(this, renderer);
 		}
 
 		__renderEvent(renderer);
@@ -508,8 +566,8 @@ class Tilemap extends #if !flash DisplayObject #else Bitmap implements IDisplayO
 
 		// } else {
 
-		Context3DDisplayObject.renderMask(this, renderer);
-		Context3DTilemap.renderMask(this, renderer);
+		GLDisplayObject.renderMask(this, renderer);
+		GLTilemap.renderMask(this, renderer);
 
 		// }
 	}
