@@ -41,6 +41,11 @@ import lime.graphics.ImageBuffer;
 import lime.graphics.RenderContext;
 import lime.math.ARGB;
 import lime.math.Vector2;
+#if lime_cairo
+import openfl._internal.renderer.cairo.CairoRenderer;
+#elseif (js && html5)
+import openfl._internal.renderer.canvas.CanvasRenderer;
+#end
 #end
 #if (js && html5)
 import js.html.CanvasElement;
@@ -954,7 +959,7 @@ class BitmapData implements IBitmapDrawable
 			#else
 			if (__softwareRenderer == null) __softwareRenderer = new CairoRenderer(null);
 			var renderer:CairoRenderer = cast __softwareRenderer;
-			renderer.cairo = getSurface();
+			renderer.cairo = new Cairo(getSurface());
 			#end
 
 			renderer.__allowSmoothing = smoothing;

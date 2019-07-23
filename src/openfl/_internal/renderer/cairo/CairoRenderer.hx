@@ -1,6 +1,10 @@
 package openfl._internal.renderer.cairo;
 
-import lime.system.CFFIPointer;
+import lime.graphics.cairo.Cairo;
+import lime.graphics.cairo.CairoFilter;
+import lime.graphics.cairo.CairoOperator;
+import lime.graphics.cairo.CairoPattern;
+import lime.math.Matrix3;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
 import openfl.display.BlendMode;
@@ -18,9 +22,6 @@ import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-import lime.graphics.cairo.Cairo;
-import lime.graphics.cairo.CairoOperator;
-import lime.math.Matrix3;
 
 /**
 	**BETA**
@@ -111,9 +112,35 @@ class CairoRenderer extends CairoRendererAPI
 		}
 	}
 
+	private function renderBitmapData(bitmapData:BitmapData):Void
+	{
+		if (!bitmapData.readable) return;
+
+		applyMatrix(bitmapData.__renderTransform, cairo);
+
+		var surface = bitmapData.getSurface();
+
+		if (surface != null)
+		{
+			var pattern = CairoPattern.createForSurface(surface);
+
+			if (!__allowSmoothing || cairo.antialias == NONE)
+			{
+				pattern.filter = CairoFilter.NEAREST;
+			}
+			else
+			{
+				pattern.filter = CairoFilter.GOOD;
+			}
+
+			cairo.source = pattern;
+			cairo.paint();
+		}
+	}
+
 	private function renderDisplayObject(object:DisplayObject):Void
 	{
-		if (object != null)
+		if (object != null && object.__type != null)
 		{
 			switch (object.__type)
 			{
@@ -121,7 +148,7 @@ class CairoRenderer extends CairoRendererAPI
 					renderBitmap(cast object);
 				case DISPLAY_OBJECT_CONTAINER:
 					renderDisplayObjectContainer(cast object);
-				case SHAPE:
+				case DISPLAY_OBJECT, SHAPE:
 					renderShape(cast object);
 				case SIMPLE_BUTTON:
 					renderSimpleButton(cast object);
@@ -312,14 +339,9 @@ class CairoRenderer extends CairoRendererAPI
 	@:noCompletion private override function __drawBitmapData(bitmapData:BitmapData, source:IBitmapDrawable, clipRect:Rectangle):Void
 	{
 		#if lime_cairo
-		var clipMatrix = null;
-
 		if (clipRect != null)
 		{
-			clipMatrix = Matrix.__pool.get();
-			clipMatrix.copyFrom(source.__renderTransform);
-
-			__pushMaskRect(clipRect, clipMatrix);
+			__pushMaskRect(clipRect, source.__renderTransform);
 		}
 
 		if (source == bitmapData)
@@ -341,7 +363,6 @@ class CairoRenderer extends CairoRendererAPI
 		if (clipRect != null)
 		{
 			__popMaskRect();
-			Matrix.__pool.release(clipMatrix);
 		}
 		#end
 	}
@@ -427,10 +448,16 @@ class CairoRenderer extends CairoRendererAPI
 	{
 		if (cairo == null) return;
 
-		// TODO: BitmapData render
-		if (object != null && object.__type != null)
+		if (object != null)
 		{
-			renderDisplayObject(cast object);
+			if (object.__type != null)
+			{
+				renderDisplayObject(cast object);
+			}
+			else
+			{
+				renderBitmapData(cast object);
+			}
 		}
 	}
 

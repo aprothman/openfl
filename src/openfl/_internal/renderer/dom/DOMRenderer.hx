@@ -118,7 +118,7 @@ class DOMRenderer extends DOMRendererAPI
 
 	private function clearDisplayObject(object:DisplayObject):Void
 	{
-		if (object != null)
+		if (object != null && object.__type != null)
 		{
 			switch (object.__type)
 			{
@@ -128,7 +128,7 @@ class DOMRenderer extends DOMRendererAPI
 					clearDisplayObjectContainer(cast object);
 				case DOM_ELEMENT:
 					clearDOMElement(cast object);
-				case SHAPE:
+				case DISPLAY_OBJECT, SHAPE:
 					clearShape(cast object);
 				case SIMPLE_BUTTON:
 					clearSimpleButton(cast object);
@@ -237,7 +237,7 @@ class DOMRenderer extends DOMRendererAPI
 
 	private function renderDisplayObject(object:DisplayObject):Void
 	{
-		if (object != null)
+		if (object != null && object.__type != null)
 		{
 			switch (object.__type)
 			{
@@ -247,7 +247,7 @@ class DOMRenderer extends DOMRendererAPI
 					renderDisplayObjectContainer(cast object);
 				case DOM_ELEMENT:
 					renderDOMElement(cast object);
-				case SHAPE:
+				case DISPLAY_OBJECT, SHAPE:
 					renderShape(cast object);
 				case SIMPLE_BUTTON:
 					renderSimpleButton(cast object);
