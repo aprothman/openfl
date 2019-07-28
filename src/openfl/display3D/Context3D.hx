@@ -7,6 +7,7 @@ import openfl._internal.backend.gl.GLTexture;
 import openfl._internal.renderer.context3D.Context3DState;
 import openfl._internal.renderer.SamplerState;
 import openfl._internal.utils.Float32Array;
+import openfl._internal.utils.ObjectPool;
 import openfl._internal.utils.UInt16Array;
 import openfl._internal.utils.UInt8Array;
 import openfl.display3D.textures.CubeTexture;
@@ -318,9 +319,9 @@ import lime.math.Vector2;
 
 			#if (js && html5)
 			if (extension == null
-				|| !Reflect.hasField(extension, "MAX_TEXTURE_MAX_ANISOTROPY_EXT")) extension = gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
+				|| extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
 			if (extension == null
-				|| !Reflect.hasField(extension, "MAX_TEXTURE_MAX_ANISOTROPY_EXT")) extension = gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+				|| extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
 			#end
 
 			if (extension != null)
