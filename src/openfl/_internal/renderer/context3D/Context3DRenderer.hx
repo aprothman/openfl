@@ -1407,9 +1407,6 @@ class Context3DRenderer extends Context3DRendererAPI
 
 	private function __updateCacheBitmap(object:DisplayObject, force:Bool):Bool
 	{
-		// TODO: Use separate cacheBitmapData for software/hardware to prevent invalidating each other
-		// TODO: Use a single texture pool for all filter rendering
-
 		#if openfl_disable_cacheasbitmap
 		return false;
 		#end
@@ -1514,18 +1511,17 @@ class Context3DRenderer extends Context3DRendererAPI
 				{
 					var needsFill = (object.opaqueBackground != null && (bitmapWidth != filterWidth || bitmapHeight != filterHeight));
 					var fillColor = object.opaqueBackground != null ? (0xFF << 24) | object.opaqueBackground : 0;
-					var bitmapColor = needsFill ? 0 : fillColor;
 
 					if (object.__cacheBitmapDataTexture == null
 						|| bitmapWidth > object.__cacheBitmapDataTexture.width
 						|| bitmapHeight > object.__cacheBitmapDataTexture.height)
 					{
-						object.__cacheBitmapDataTexture = new BitmapData(bitmapWidth, bitmapHeight, true, bitmapColor);
+						// TODO: Use pool for HW bitmap data
+						var texture = context3D.createRectangleTexture(bitmapWidth, bitmapHeight, BGRA, true);
+						object.__cacheBitmapDataTexture = BitmapData.fromTexture(texture);
 					}
-					else
-					{
-						object.__cacheBitmapDataTexture.fillRect(object.__cacheBitmapDataTexture.rect, bitmapColor);
-					}
+
+					object.__cacheBitmapDataTexture.fillRect(rect, 0);
 
 					if (needsFill)
 					{
@@ -1536,8 +1532,6 @@ class Context3DRenderer extends Context3DRendererAPI
 				else
 				{
 					ColorTransform.__pool.release(colorTransform);
-
-					// TODO: Use pool for HW bitmap data
 
 					object.__cacheBitmap = null;
 					object.__cacheBitmapData = null;
@@ -1629,9 +1623,9 @@ class Context3DRenderer extends Context3DRendererAPI
 					var cacheRenderer = BitmapData.__hardwareRenderer;
 					BitmapData.__hardwareRenderer = childRenderer;
 
-					var bitmap = __stage.__bitmapDataPool.get(filterWidth, filterHeight, true);
-					var bitmap2 = __stage.__bitmapDataPool.get(filterWidth, filterHeight, true);
-					var bitmap3 = needCopyOfOriginal ? __stage.__bitmapDataPool.get(filterWidth, filterHeight, true) : null;
+					var bitmap = context3D.__bitmapDataPool.get(filterWidth, filterHeight);
+					var bitmap2 = context3D.__bitmapDataPool.get(filterWidth, filterHeight);
+					var bitmap3 = needCopyOfOriginal ? context3D.__bitmapDataPool.get(filterWidth, filterHeight) : null;
 
 					bitmap.__setUVRect(context3D, 0, 0, filterWidth, filterHeight);
 					bitmap2.__setUVRect(context3D, 0, 0, filterWidth, filterHeight);
@@ -1677,9 +1671,9 @@ class Context3DRenderer extends Context3DRendererAPI
 						// object.__cacheBitmap.bitmapData = object.__cacheBitmapData;
 					}
 
-					__stage.__bitmapDataPool.release(bitmap);
-					__stage.__bitmapDataPool.release(bitmap2);
-					if (bitmap3 != null) __stage.__bitmapDataPool.release(bitmap3);
+					context3D.__bitmapDataPool.release(bitmap);
+					context3D.__bitmapDataPool.release(bitmap2);
+					if (bitmap3 != null) context3D.__bitmapDataPool.release(bitmap3);
 
 					BitmapData.__hardwareRenderer = cacheRenderer;
 				}

@@ -4,6 +4,7 @@ package openfl.display;
 import openfl._internal.backend.gl.GLFramebuffer;
 import openfl._internal.backend.gl.GLRenderbuffer;
 import openfl._internal.formats.swf.SWFLite;
+import openfl._internal.renderer.BitmapDataPool;
 import openfl._internal.renderer.DisplayObjectType;
 import openfl._internal.symbols.BitmapSymbol;
 import openfl._internal.utils.Float32Array;
@@ -130,6 +131,7 @@ class BitmapData implements IBitmapDrawable
 {
 	@:noCompletion private static inline var VERTEX_BUFFER_STRIDE:Int = 14;
 	@:noCompletion private static var __hardwareRenderer:#if lime Context3DRenderer #else Dynamic #end;
+	@:noCompletion private static var __pool:BitmapDataPool = new BitmapDataPool();
 	@:noCompletion private static var __softwareRenderer:DisplayObjectRenderer;
 	@:noCompletion private static var __supportsBGRA:Null<Bool> = null;
 	@:noCompletion private static var __textureFormat:Int;
@@ -710,20 +712,43 @@ class BitmapData implements IBitmapDrawable
 		{
 			var point = Point.__pool.get();
 			var rect = Rectangle.__pool.get();
+			rect.copyFrom(sourceBitmapData.rect);
+			rect.__contract(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
 
-			var copy = Lib.current.stage.__bitmapDataPool.get(sourceBitmapData.width, sourceBitmapData.height, false);
-			copy.image.copyPixels(image, rect.__toLimeRectangle(), point.__toLimeVector2());
+			var copy = BitmapData.__pool.get(Std.int(rect.width), Std.int(rect.height));
 
-			rect.setTo(alphaPoint != null ? alphaPoint.x : 0, alphaPoint != null ? alphaPoint.y : 0, sourceRect.width, sourceRect.height);
-			point.setTo(sourceRect.x, sourceRect.y);
-			copy.image.copyChannel(alphaBitmapData.image, rect.__toLimeRectangle(), point.__toLimeVector2(), ALPHA, ALPHA);
+			ImageCanvasUtil.convertToCanvas(copy.image);
+			ImageCanvasUtil.convertToCanvas(sourceBitmapData.image);
+			ImageCanvasUtil.convertToCanvas(alphaBitmapData.image);
 
-			image.copyPixels(sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(), null, null, mergeAlpha);
+			if (alphaPoint != null)
+			{
+				rect.x += alphaPoint.x;
+				rect.y += alphaPoint.y;
+			}
 
-			Point.__pool.release(point);
+			copy.image.buffer.__srcContext.globalCompositeOperation = "source-over";
+			copy.image.buffer.__srcContext.drawImage(alphaBitmapData.image.buffer.src, Std.int(rect.x + sourceBitmapData.image.offsetX),
+				Std.int(rect.y + sourceBitmapData.image.offsetY), Std.int(rect.width), Std.int(rect.height), Std.int(point.x + image.offsetX),
+				Std.int(point.y + image.offsetY), Std.int(rect.width), Std.int(rect.height));
+
+			if (alphaPoint != null)
+			{
+				rect.x -= alphaPoint.x;
+				rect.y -= alphaPoint.y;
+			}
+
+			copy.image.buffer.__srcContext.globalCompositeOperation = "source-in";
+			copy.image.buffer.__srcContext.drawImage(sourceBitmapData.image.buffer.src, Std.int(rect.x + sourceBitmapData.image.offsetX),
+				Std.int(rect.y + sourceBitmapData.image.offsetY), Std.int(rect.width), Std.int(rect.height), Std.int(point.x + image.offsetX),
+				Std.int(point.y + image.offsetY), Std.int(rect.width), Std.int(rect.height));
+
+			// TODO: Render directly for mergeAlpha=false?
+			image.copyPixels(copy.image, copy.rect.__toLimeRectangle(), destPoint.__toLimeVector2(), null, null, mergeAlpha);
+
+			BitmapData.__pool.release(copy);
 			Rectangle.__pool.release(rect);
-			Lib.current.stage.__bitmapDataPool.release(copy);
-
+			Point.__pool.release(point);
 			return;
 		}
 		#end
@@ -1167,7 +1192,7 @@ class BitmapData implements IBitmapDrawable
 			color = 0;
 		}
 
-		if (!readable && __hardwareRenderer != null)
+		if (!readable && __texture != null && __hardwareRenderer != null)
 		{
 			__hardwareRenderer.__fillRect(this, rect, color);
 		}
