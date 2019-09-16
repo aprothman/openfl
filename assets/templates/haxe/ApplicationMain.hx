@@ -49,7 +49,9 @@ class ApplicationMain
 		_app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
 		_app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
 		#end::end::
-
+		
+		// only create window and execute app if noautoexec define exists
+		#if !noautoexec
 		createWindows();
 
 		_app.init();
@@ -58,6 +60,7 @@ class ApplicationMain
 
 		#if (sys && !ios && !nodejs && !emscripten)
 		lime.system.System.exit(result);
+		#end
 		#end
 	}
 
