@@ -65,6 +65,7 @@ class ApplicationMain
 	}
 
 	public static function createWindows():Void {
+		trace("ApplicationMain: createWindows called");
 		#if !flash
 		::foreach windows::
 		var foreignHandle:Null<Int> = cast ::foreignHandle::;
@@ -134,28 +135,34 @@ class ApplicationMain
 	}
 
 	public static function createWindow(attributes:WindowAttributes):Void {
+		trace("ApplicationMain: createWindow called");
 		_app.createWindow(attributes);
 	}
 
 	#if lime
 	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):Void {
+		trace("ApplicationMain: createWindowFrom called");
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
 		curWindow.frameRate = frameRate;
 	}
 	#end
 
 	public static function setUpApp():Void {
+		trace("ApplicationMain: setUpApp called");
 		preload();
 		_app.init();
 	}
 
 	private static function preload():Void {
+		trace("ApplicationMain: preload called");
 		var preloader = getPreloader();
 		_app.preloader.onProgress.add (function(loaded, total) {
 			@:privateAccess preloader.update(loaded, total);
 		});
 		_app.preloader.onComplete.add(function() {
+			trace("ApplicationMain: calling preloader.start");
 			@:privateAccess preloader.start();
+			trace("ApplicationMain: preloader.start called");
 		});
 
 		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
@@ -169,9 +176,11 @@ class ApplicationMain
 		}
 
 		_app.preloader.load();
+		trace("ApplicationMain: preload got to end of function");
 	}
 
 	public static function start(stage:openfl.display.Stage):Void {
+		trace("ApplicationMain: start called");
 		#if flash
 		ApplicationMain.getEntryPoint();
 		#else
