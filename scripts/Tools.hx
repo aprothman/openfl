@@ -330,7 +330,7 @@ class Tools
 						BASE_CLASS_NAME: baseClassName,
 						SWF_ID: swfAsset.id,
 						SYMBOL_ID: symbolID,
-						PREFIX: prefix,
+						PREFIX: "",
 						CLASS_PROPERTIES: classProperties
 					};
 				var template = new Template(templateData);
@@ -424,7 +424,7 @@ class Tools
 					name = className.substr(lastIndexOfPeriod + 1);
 				}
 
-				name = formatClassName(name, prefix);
+				// name = formatClassName(name, prefix);
 
 				var classProperties = [];
 				var objectReferences = new Map<String, Bool>();
@@ -479,7 +479,7 @@ class Tools
 											}
 											else
 											{
-												className = formatClassName(className, prefix);
+												// className = formatClassName(className, prefix);
 											}
 
 											if (className != null)

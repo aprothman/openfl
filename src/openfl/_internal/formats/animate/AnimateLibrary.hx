@@ -571,6 +571,8 @@ import openfl.utils.AssetManifest;
 
 	private function __parseSprite(data:Dynamic):AnimateSpriteSymbol
 	{
+		if (data == null) return null;
+
 		var symbol = new AnimateSpriteSymbol();
 		symbol.id = data.id;
 		symbol.className = data.className;
@@ -586,7 +588,10 @@ import openfl.utils.AssetManifest;
 			frame = new AnimateFrame();
 			frame.label = frameData.label;
 			// frame.script = frameData.script;
-			// frame.scriptSource = frameData.scriptSource;
+			if (Reflect.hasField(frameData, "scriptSource"))
+			{
+				frame.scriptSource = frameData.scriptSource;
+			}
 			objects = frameData.objects;
 			if (objects != null && objects.length > 0)
 			{
