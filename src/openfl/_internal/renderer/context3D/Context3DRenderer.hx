@@ -7,6 +7,8 @@ import lime.graphics.RenderContext;
 import lime.graphics.WebGLRenderContext;
 import lime.math.ARGB;
 import lime.math.Matrix4;
+import lime.utils.Float32Array;
+import openfl._internal.renderer.context3D.batcher.BatchRenderer;
 import openfl._internal.renderer.ShaderBuffer;
 import openfl._internal.utils.ObjectPool;
 import openfl.display.Bitmap;
@@ -89,6 +91,7 @@ class Context3DRenderer extends Context3DRendererAPI
 	private static var __scissorRectangle:Rectangle = new Rectangle();
 	private static var __textureSizeValue:Array<Float> = [0, 0];
 
+	public var batcher:BatchRenderer = null;
 	public var context3D:Context3D;
 
 	private var __alphaMaskShader:Context3DAlphaMaskShader;
@@ -106,6 +109,7 @@ class Context3DRenderer extends Context3DRendererAPI
 	private var __displayHeight:Int;
 	private var __displayWidth:Int;
 	private var __flipped:Bool;
+	private var __getMatrixHelperMatrix:Matrix = new Matrix();
 	private var __gl:WebGLRenderContext;
 	private var __height:Int;
 	private var __maskShader:Context3DMaskShader;
@@ -559,6 +563,21 @@ class Context3DRenderer extends Context3DRendererAPI
 		}
 	}
 
+	private function __getDisplayTransformTempMatrix(transform:Matrix, snapToPixel:Bool):Matrix
+	{
+		var matrix = __getMatrixHelperMatrix;
+		matrix.copyFrom(transform);
+		// matrix.concat(__worldTransform);
+
+		if (snapToPixel)
+		{
+			matrix.tx = Math.round(matrix.tx);
+			matrix.ty = Math.round(matrix.ty);
+		}
+
+		return matrix;
+	}
+
 	private function __getMatrix(transform:Matrix, pixelSnapping:PixelSnapping):Array<Float>
 	{
 		var _matrix = Matrix.__pool.get();
@@ -601,6 +620,15 @@ class Context3DRenderer extends Context3DRendererAPI
 		__context = context.__context;
 		__gl = context.__context.webgl;
 		gl = __gl;
+
+		if (batcher == null)
+		{
+			batcher = new BatchRenderer(this, 4096);
+		}
+		else
+		{
+			batcher.flush();
+		}
 
 		__defaultRenderTarget = defaultRenderTarget;
 		__flipped = (__defaultRenderTarget == null);
@@ -677,6 +705,8 @@ class Context3DRenderer extends Context3DRendererAPI
 	{
 		if (__stencilReference == 0) return;
 
+		batcher.flush();
+
 		var mask = __maskObjects.pop();
 
 		if (__stencilReference > 1)
@@ -686,6 +716,9 @@ class Context3DRenderer extends Context3DRendererAPI
 			context3D.setColorMask(false, false, false, false);
 
 			__renderMask(mask);
+
+			batcher.flush();
+
 			__stencilReference--;
 
 			context3D.setStencilActions(FRONT_AND_BACK, EQUAL, KEEP, KEEP, KEEP);
@@ -750,6 +783,8 @@ class Context3DRenderer extends Context3DRendererAPI
 
 	private function __pushMask(mask:DisplayObject):Void
 	{
+		batcher.flush();
+
 		if (__stencilReference == 0)
 		{
 			context3D.clear(0, 0, 0, 0, 0, 0, Context3DClearMask.STENCIL);
@@ -761,6 +796,9 @@ class Context3DRenderer extends Context3DRendererAPI
 		context3D.setColorMask(false, false, false, false);
 
 		__renderMask(mask);
+
+		batcher.flush();
+
 		__maskObjects.push(mask);
 		__stencilReference++;
 
@@ -857,6 +895,9 @@ class Context3DRenderer extends Context3DRendererAPI
 				__renderDisplayObject(cast object);
 			}
 
+			// flush whatever is left in the batch to render
+			batcher.flush();
+
 			// TODO: Handle this in Context3D as a viewport?
 
 			if (__offsetX > 0 || __offsetY > 0)
@@ -934,6 +975,9 @@ class Context3DRenderer extends Context3DRendererAPI
 					__renderBitmapData(cast object);
 				}
 			}
+
+			// flush whatever is left in the batch to render
+			batcher.flush();
 
 			object.__mask = cacheMask;
 			object.__scrollRect = cacheScrollRect;
@@ -1119,6 +1163,10 @@ class Context3DRenderer extends Context3DRendererAPI
 		var indexBuffer = source.getIndexBuffer(context3D);
 		context3D.drawTriangles(indexBuffer);
 
+		#if gl_stats
+		Context3DStats.incrementDrawCall(DrawCallContext.STAGE);
+		#end
+
 		if (cacheRTT != null)
 		{
 			context3D.setRenderToTexture(cacheRTT, cacheRTTDepthStencil, cacheRTTAntiAlias, cacheRTTSurfaceSelector);
@@ -1280,6 +1328,8 @@ class Context3DRenderer extends Context3DRendererAPI
 
 	private function __scissorRect(clipRect:Rectangle = null):Void
 	{
+		batcher.flush();
+
 		if (clipRect != null)
 		{
 			var x = Math.floor(clipRect.x);
@@ -1394,6 +1444,16 @@ class Context3DRenderer extends Context3DRendererAPI
 				}
 
 				return null;
+		}
+	}
+
+	private inline function __shouldSnapToPixel(bitmap:Bitmap):Bool
+	{
+		return switch bitmap.pixelSnapping
+		{
+			case null | NEVER: false;
+			case ALWAYS: true;
+			case AUTO: Math.abs(bitmap.__renderTransform.a) == 1 && Math.abs(bitmap.__renderTransform.d) == 1; // only snap when not scaled/rotated/skewed
 		}
 	}
 
