@@ -49,8 +49,8 @@ class ApplicationMain
 		_app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
 		_app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
 		#end::end::
-
-		// only create window and execute app if noautoexec define exists
+		
+		// only create window and execute app if noautoexec define Doesn't exists
 		#if !noautoexec
 		createWindows();
 
@@ -158,21 +158,24 @@ class ApplicationMain
 		trace("ApplicationMain: preload called");
 		var preloader = getPreloader();
 		_app.preloader.onProgress.add (function(loaded, total) {
+			trace("ApplicationMain: calling preloader.update");
 			@:privateAccess preloader.update(loaded, total);
 		});
 		_app.preloader.onComplete.add(function() {
-			trace("ApplicationMain: calling preloader.start");
+			trace("ApplicationMain: calling openfl.display.Preloader.start");
 			@:privateAccess preloader.start();
-			trace("ApplicationMain: preloader.start called");
+			trace("ApplicationMain: openfl.display.Preloader.start called");
 		});
 
 		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
 
 		for (library in ManifestResources.preloadLibraries) {
+			trace("ApplicationMain: _app.preloader.addLibrary called");
 			_app.preloader.addLibrary(library);
 		}
 
 		for (name in ManifestResources.preloadLibraryNames) {
+			trace("ApplicationMain: _app.preloader.addLibraryName called");
 			_app.preloader.addLibraryName(name);
 		}
 
@@ -187,9 +190,9 @@ class ApplicationMain
 		#else
 		try {
 			ApplicationMain.getEntryPoint();
-
+			trace("ApplicationMain: getEntryPoint called");
 			stage.dispatchEvent(new openfl.events.Event(openfl.events.Event.RESIZE, false, false));
-
+			trace("ApplicationMain: stage.dispatchEvent RESIZE called");
 			if (stage.window.fullscreen) {
 				stage.dispatchEvent(new openfl.events.FullScreenEvent(openfl.events.FullScreenEvent.FULL_SCREEN, false, false, true, true));
 			}
