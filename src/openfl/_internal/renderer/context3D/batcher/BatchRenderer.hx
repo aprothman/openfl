@@ -194,6 +194,7 @@ class BatchRenderer
 		for (i in 0...__batch.numTextures)
 		{
 			__samplers[i].input = __batch.textures[i];
+			__samplers[i].filter = LINEAR;
 		}
 		for (i in __batch.numTextures...__maxTextures)
 		{
@@ -270,6 +271,8 @@ private class Batch
 		var startOffset = numQuads * FLOATS_PER_QUAD;
 		var ct = colorTransform != null ? colorTransform : IDENTITY_COLOR_TRANSFORM;
 
+		var alphaOffset = ct.alphaOffset * alpha;
+
 		inline function setVertex(i:Int):Void
 		{
 			var offset = startOffset + i * BatchShader.FLOATS_PER_VERTEX;
@@ -280,11 +283,11 @@ private class Batch
 			vertices[offset + 4] = ct.redMultiplier;
 			vertices[offset + 5] = ct.greenMultiplier;
 			vertices[offset + 6] = ct.blueMultiplier;
-			vertices[offset + 7] = ct.alphaMultiplier * alpha;
+			vertices[offset + 7] = alpha;
 			vertices[offset + 8] = ct.redOffset;
 			vertices[offset + 9] = ct.greenOffset;
 			vertices[offset + 10] = ct.blueOffset;
-			vertices[offset + 11] = ct.alphaOffset * alpha;
+			vertices[offset + 11] = alphaOffset;
 			vertices[offset + 12] = textureUnit;
 		}
 
@@ -319,7 +322,7 @@ private class BatchShader extends Shader
 			gl_Position = openfl_Matrix * vec4(openfl_Position, 0, 1);
 			openfl_TextureCoordv = openfl_TextureCoord;
 			openfl_ColorMultiplierv = openfl_ColorMultiplier;
-			openfl_ColorOffsetv = openfl_ColorOffset;
+			openfl_ColorOffsetv = openfl_ColorOffset / 255.0;
 			vTextureId = aTextureId;
 		}
 	")
@@ -371,19 +374,10 @@ private class BatchShader extends Shader
 
 			} else {
 
-				color = vec4 (color.rgb / color.a, color.a);
+				color = vec4(color.rgb / color.a, color.a);
+				color = clamp((color * openfl_ColorMultiplierv) + openfl_ColorOffsetv, 0.0, 1.0);
+				gl_FragColor = vec4(color.rgb * color.a, color.a);
 
-				color = clamp (openfl_ColorOffsetv + (color * openfl_ColorMultiplierv), 0.0, 1.0);
-
-				if (color.a > 0.0) {
-
-					gl_FragColor = vec4 (color.rgb * color.a, color.a);
-
-				} else {
-
-					gl_FragColor = vec4 (0.0, 0.0, 0.0, 0.0);
-
-				}
 			}
 		}
 	')
