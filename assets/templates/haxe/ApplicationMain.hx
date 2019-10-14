@@ -143,8 +143,8 @@ class ApplicationMain
 	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):Void {
 		trace("ApplicationMain: createWindowFrom called");
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
-
-		curWindow.frameRate = frameRate == null ? 30 : frameRate;
+		if (frameRate == null) frameRate = ::fps:: == null ? 30 : ::fps::;
+		curWindow.frameRate = frameRate;
 	}
 	#end
 
