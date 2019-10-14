@@ -49,7 +49,7 @@ class ApplicationMain
 		_app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
 		_app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
 		#end::end::
-		
+
 		// only create window and execute app if noautoexec define exists
 		#if !noautoexec
 		createWindows();
@@ -143,7 +143,8 @@ class ApplicationMain
 	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):Void {
 		trace("ApplicationMain: createWindowFrom called");
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
-		curWindow.frameRate = frameRate;
+
+		curWindow.frameRate = frameRate == null ? 30 : frameRate;
 	}
 	#end
 
