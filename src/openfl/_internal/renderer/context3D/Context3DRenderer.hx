@@ -486,7 +486,9 @@ class Context3DRenderer extends Context3DRendererAPI
 		var cacheRTTAntiAlias = context.__state.renderToTextureAntiAlias;
 		var cacheRTTSurfaceSelector = context.__state.renderToTextureSurfaceSelector;
 
+		var prevRenderTarget = __defaultRenderTarget;
 		context.setRenderToTexture(bitmapData.getTexture(context), true);
+		__setRenderTarget(bitmapData);
 
 		__render(source);
 
@@ -498,6 +500,8 @@ class Context3DRenderer extends Context3DRendererAPI
 		{
 			context.setRenderToBackBuffer();
 		}
+
+		__setRenderTarget(prevRenderTarget);
 
 		if (clipRect != null)
 		{
@@ -563,13 +567,18 @@ class Context3DRenderer extends Context3DRendererAPI
 		}
 	}
 
-	private function __getDisplayTransformTempMatrix(transform:Matrix, snapToPixel:Bool):Matrix
+	private function __getDisplayTransformTempMatrix(transform:Matrix, pixelSnapping:PixelSnapping):Matrix
 	{
 		var matrix = __getMatrixHelperMatrix;
 		matrix.copyFrom(transform);
 		// matrix.concat(__worldTransform);
 
-		if (snapToPixel)
+		if (pixelSnapping == ALWAYS
+			|| (pixelSnapping == AUTO
+				&& matrix.b == 0
+				&& matrix.c == 0
+				&& (matrix.a < 1.001 && matrix.a > 0.999)
+				&& (matrix.d < 1.001 && matrix.d > 0.999)))
 		{
 			matrix.tx = Math.round(matrix.tx);
 			matrix.ty = Math.round(matrix.ty);
@@ -759,7 +768,6 @@ class Context3DRenderer extends Context3DRendererAPI
 		if (__numClipRects > 0)
 		{
 			__numClipRects--;
-
 			if (__numClipRects > 0)
 			{
 				__scissorRect(__clipRects[__numClipRects - 1]);
@@ -981,6 +989,8 @@ class Context3DRenderer extends Context3DRendererAPI
 
 			object.__mask = cacheMask;
 			object.__scrollRect = cacheScrollRect;
+
+			context3D.setScissorRectangle(null);
 		}
 
 		context3D.present();
@@ -997,7 +1007,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		if (bitmap.__cacheBitmap != null && !bitmap.__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(bitmap.__cacheBitmap, this);
+			Context3DBitmap.render2(bitmap.__cacheBitmap, this);
 		}
 		else
 		{
@@ -1014,7 +1024,7 @@ class Context3DRenderer extends Context3DRendererAPI
 		setShader(shader);
 		applyBitmapData(bitmapData, __upscaled);
 		applyMatrix(__getMatrix(bitmapData.__worldTransform, AUTO));
-		applyAlpha(bitmapData.__worldAlpha);
+		applyAlpha(__getAlpha(bitmapData.__worldAlpha));
 		applyColorTransform(bitmapData.__worldColorTransform);
 		updateShader();
 
@@ -1053,6 +1063,12 @@ class Context3DRenderer extends Context3DRendererAPI
 					__renderTilemap(cast object);
 				case VIDEO:
 					__renderVideo(cast object);
+				#if draft
+				case GL_GRAPHICS:
+					openfl.display.HWGraphics.render(cast object, this);
+				case GEOMETRY:
+					openfl._internal.renderer.context3D.Context3DGeometry.render(cast object, this);
+				#end
 				default:
 			}
 
@@ -1093,7 +1109,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		if (container.__cacheBitmap != null && !container.__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(container.__cacheBitmap, this);
+			Context3DBitmap.render2(container.__cacheBitmap, this);
 		}
 		else
 		{
@@ -1151,7 +1167,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		var shader = __initShader(shader);
 		setShader(shader);
-		applyAlpha(1);
+		applyAlpha(__getAlpha(1));
 		applyBitmapData(source, smooth);
 		applyColorTransform(null);
 		applyMatrix(__getMatrix(source.__renderTransform, AUTO));
@@ -1234,7 +1250,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		if (shape.__cacheBitmap != null && !shape.__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(shape.__cacheBitmap, this);
+			Context3DBitmap.render2(shape.__cacheBitmap, this);
 		}
 		else
 		{
@@ -1257,7 +1273,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		if (textField.__cacheBitmap != null && !textField.__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(textField.__cacheBitmap, this);
+			Context3DBitmap.render2(textField.__cacheBitmap, this);
 		}
 		else
 		{
@@ -1272,7 +1288,7 @@ class Context3DRenderer extends Context3DRendererAPI
 
 		if (tilemap.__cacheBitmap != null && !tilemap.__isCacheBitmapRender)
 		{
-			Context3DBitmap.render(tilemap.__cacheBitmap, this);
+			Context3DBitmap.render2(tilemap.__cacheBitmap, this);
 		}
 		else
 		{
@@ -1291,8 +1307,8 @@ class Context3DRenderer extends Context3DRendererAPI
 		__width = width;
 		__height = height;
 
-		var w = (__defaultRenderTarget == null) ? __stage.stageWidth : __defaultRenderTarget.width;
-		var h = (__defaultRenderTarget == null) ? __stage.stageHeight : __defaultRenderTarget.height;
+		var w = (__defaultRenderTarget == null) ? __stage.stageWidth : __defaultRenderTarget.__textureWidth;
+		var h = (__defaultRenderTarget == null) ? __stage.stageHeight : __defaultRenderTarget.__textureHeight;
 
 		__offsetX = __defaultRenderTarget == null ? Math.round(__worldTransform.__transformX(0, 0)) : 0;
 		__offsetY = __defaultRenderTarget == null ? Math.round(__worldTransform.__transformY(0, 0)) : 0;
