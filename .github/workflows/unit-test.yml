@@ -5,6 +5,7 @@ on: [push]
 jobs:
 
   haxelib:
+    name: "Haxelib"
     runs-on: ubuntu-16.04
 
     steps:
@@ -39,7 +40,25 @@ jobs:
       run: |
         hxp unit-test neko
 
+    - name: Notify Discord (success)
+      uses: appleboy/discord-action@master
+      with:
+        webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+        webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+        color: "#00C07F"
+        message: "Haxelib unit tests succeeded.\nhttps://github.com/openfl/openfl/actions"
+    
+    - name: Notify Discord (failure)
+      uses: appleboy/discord-action@master
+      if: failure()
+      with:
+        webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+        webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+        color: "#FF6562"
+        message: "Haxelib unit tests failed.\nhttps://github.com/openfl/openfl/actions"
+        
   npm:
+    name: "NPM"
     runs-on: ubuntu-16.04
 
     steps:
@@ -55,14 +74,36 @@ jobs:
         mkdir $GITHUB_WORKSPACE/.haxelib
         haxelib setup $GITHUB_WORKSPACE/.haxelib
         haxelib dev openfl $GITHUB_WORKSPACE
-        sudo apt-get install npm -y
 
     - name: Install dependencies
-      run: |
-        sudo npm install
+      uses: ianwalter/puppeteer@v2.0.0
+      with:
+        args: npm install
+        
+    - name: Build openfl.js
+      uses: ianwalter/puppeteer@v2.0.0
+      with:
+        args: npm run build -s
 
     - name: Run unit tests
-      run: |
-        npm run build
-        npm run test
+      uses: ianwalter/puppeteer@v2.0.0
+      with:
+        args: npm run test -s
+    
+    - name: Notify Discord (success)
+      uses: appleboy/discord-action@master
+      with:
+        webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+        webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+        color: "#00C07F"
+        message: "NPM unit tests succeeded.\nhttps://github.com/openfl/openfl/actions"
+    
+    - name: Notify Discord (failure)
+      uses: appleboy/discord-action@master
+      if: failure()
+      with:
+        webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+        webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+        color: "#FF6562"
+        message: "NPM unit tests failed.\nhttps://github.com/openfl/openfl/actions"
 
