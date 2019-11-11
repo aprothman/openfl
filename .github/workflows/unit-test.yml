@@ -46,7 +46,7 @@ jobs:
         webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
         webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
         color: "#00C07F"
-        message: "Haxelib unit tests succeeded.\nhttps://github.com/openfl/openfl/actions"
+        message: "https://github.com/openfl/openfl/actions\nHaxelib unit tests succeeded."
     
     - name: Notify Discord (failure)
       uses: appleboy/discord-action@master
@@ -55,7 +55,7 @@ jobs:
         webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
         webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
         color: "#FF6562"
-        message: "Haxelib unit tests failed.\nhttps://github.com/openfl/openfl/actions"
+        message: "https://github.com/openfl/openfl/actions\nHaxelib unit tests failed."
         
   npm:
     name: "NPM"
@@ -76,19 +76,20 @@ jobs:
         haxelib dev openfl $GITHUB_WORKSPACE
 
     - name: Install dependencies
-      uses: ianwalter/puppeteer@v2.0.0
-      with:
-        args: npm install
+      run: |
+        npm install
+        npm install -D mocha-puppeteer
         
     - name: Build openfl.js
-      uses: ianwalter/puppeteer@v2.0.0
-      with:
-        args: npm run build -s
+      run: npm run build -s
+    
+    - name: Build unit tests
+      run: npm run build-test -s
 
     - name: Run unit tests
       uses: ianwalter/puppeteer@v2.0.0
       with:
-        args: npm run test -s
+        args: npx mocha-puppeteer ./test/npm/es5/bundle.js ./test/npm/es6/bundle.js ./test/npm/haxe/bundle.js ./test/npm/typescript/bundle.js --args no-sandbox
     
     - name: Notify Discord (success)
       uses: appleboy/discord-action@master
@@ -96,7 +97,7 @@ jobs:
         webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
         webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
         color: "#00C07F"
-        message: "NPM unit tests succeeded.\nhttps://github.com/openfl/openfl/actions"
+        message: "https://github.com/openfl/openfl/actions\nNPM unit tests succeeded."
     
     - name: Notify Discord (failure)
       uses: appleboy/discord-action@master
@@ -105,5 +106,5 @@ jobs:
         webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
         webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
         color: "#FF6562"
-        message: "NPM unit tests failed.\nhttps://github.com/openfl/openfl/actions"
+        message: "https://github.com/openfl/openfl/actions\nNPM unit tests failed."
 

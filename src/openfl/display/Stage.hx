@@ -2213,6 +2213,11 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		var currentFocus = focus;
 		focus = null;
 		__cacheFocus = currentFocus;
+
+		MouseEvent.__altKey = false;
+		MouseEvent.__commandKey = false;
+		MouseEvent.__ctrlKey = false;
+		MouseEvent.__shiftKey = false;
 	}
 
 	@:noCompletion private function __onLimeWindowFullscreen(window:Window):Void
@@ -2655,8 +2660,11 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		__displayMatrix.__transformInversePoint(targetPoint);
 		var delta = Std.int(deltaY);
 
-		__dispatchStack(MouseEvent.__create(MouseEvent.MOUSE_WHEEL, 0, __mouseX, __mouseY, target.__globalToLocal(targetPoint, targetPoint), target, delta),
-			stack);
+		var event = MouseEvent.__create(MouseEvent.MOUSE_WHEEL, 0, __mouseX, __mouseY, target.__globalToLocal(targetPoint, targetPoint), target, delta);
+		event.cancelable = true;
+		__dispatchStack(event, stack);
+		if (event.isDefaultPrevented())
+			window.onMouseWheel.cancel();
 
 		Point.__pool.release(targetPoint);
 	}
