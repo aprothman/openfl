@@ -1,10 +1,11 @@
 package openfl._internal.renderer.cairo;
 
-import lime.graphics.cairo.Cairo;
-import lime.graphics.cairo.CairoFilter;
-import lime.graphics.cairo.CairoOperator;
-import lime.graphics.cairo.CairoPattern;
-import lime.math.Matrix3;
+#if openfl_cairo
+import openfl._internal.backend.cairo.Cairo;
+import openfl._internal.backend.cairo.CairoFilter;
+import openfl._internal.backend.cairo.CairoOperator;
+import openfl._internal.backend.cairo.CairoPattern;
+import openfl._internal.backend.math.Matrix3;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
 import openfl.display.BlendMode;
@@ -891,3 +892,4 @@ class CairoRenderer extends CairoRendererAPI
 		return updated;
 	}
 }
+#end

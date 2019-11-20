@@ -1,13 +1,11 @@
 package openfl.display;
 
 #if !flash
+import openfl._internal.backend.gl.WebGLRenderingContext;
+import openfl._internal.backend.math.Matrix4;
 import openfl.display3D.Context3D;
 import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
-#if lime
-import lime.graphics.WebGLRenderContext;
-import lime.math.Matrix4;
-#end
 
 /**
 	**BETA**
@@ -25,7 +23,7 @@ class OpenGLRenderer extends DisplayObjectRenderer
 	/**
 		The current OpenGL render context
 	**/
-	public var gl:#if lime WebGLRenderContext #else Dynamic #end;
+	public var gl:WebGLRenderingContext;
 
 	@:noCompletion private function new(context:Context3D, defaultRenderTarget:BitmapData = null)
 	{

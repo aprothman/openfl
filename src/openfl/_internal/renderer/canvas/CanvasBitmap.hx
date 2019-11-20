@@ -1,10 +1,9 @@
 package openfl._internal.renderer.canvas;
 
+#if openfl_html5
+import openfl._internal.backend.lime.ImageCanvasUtil;
 import openfl.display.Bitmap;
-#if lime
-import lime._internal.graphics.ImageCanvasUtil; // TODO
 
-#end
 @:access(openfl.display.Bitmap)
 @:access(openfl.display.BitmapData)
 @SuppressWarnings("checkstyle:FieldDocComment")
@@ -12,7 +11,7 @@ class CanvasBitmap
 {
 	public static inline function render(bitmap:Bitmap, renderer:CanvasRenderer):Void
 	{
-		#if (js && html5)
+		#if (lime && openfl_html5)
 		if (!bitmap.__renderable) return;
 
 		var alpha = renderer.__getAlpha(bitmap.__worldAlpha);
@@ -63,3 +62,4 @@ class CanvasBitmap
 		#end
 	}
 }
+#end

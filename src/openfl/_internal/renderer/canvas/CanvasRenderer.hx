@@ -1,7 +1,8 @@
 package openfl._internal.renderer.canvas;
 
-import lime._internal.graphics.ImageCanvasUtil;
-import lime.graphics.Canvas2DRenderContext;
+#if openfl_html5
+import openfl._internal.backend.lime.ImageCanvasUtil;
+import openfl._internal.backend.lime.Canvas2DRenderContext;
 import openfl._internal.formats.html.HTMLParser;
 import openfl.display.Bitmap;
 import openfl.display.BitmapData;
@@ -54,7 +55,10 @@ class CanvasRenderer extends CanvasRendererAPI
 
 		__colorTransform = new ColorTransform();
 		__transform = new Matrix();
+
+		#if lime
 		__type = CANVAS;
+		#end
 	}
 
 	public override function applySmoothing(context:Canvas2DRenderContext, value:Bool):Void
@@ -260,6 +264,7 @@ class CanvasRenderer extends CanvasRendererAPI
 
 	private function __renderBitmapData(bitmapData:BitmapData):Void
 	{
+		#if lime
 		if (!bitmapData.readable) return;
 
 		if (bitmapData.image.type == DATA)
@@ -272,6 +277,7 @@ class CanvasRenderer extends CanvasRendererAPI
 		setTransform(bitmapData.__renderTransform, context);
 
 		context.drawImage(bitmapData.image.src, 0, 0, bitmapData.image.width, bitmapData.image.height);
+		#end
 	}
 
 	private function __renderDisplayObject(object:DisplayObject):Void
@@ -426,7 +432,7 @@ class CanvasRenderer extends CanvasRendererAPI
 
 	private function __renderTextField(textField:TextField):Void
 	{
-		#if (js && html5)
+		#if openfl_html5
 		// TODO: Better DOM workaround on cacheAsBitmap
 
 		if (__domRenderer != null && !textField.__renderedOnCanvasWhileOnDOM)
@@ -571,6 +577,7 @@ class CanvasRenderer extends CanvasRendererAPI
 
 	private function __updateCacheBitmap(object:DisplayObject, force:Bool):Bool
 	{
+		#if lime
 		#if openfl_disable_cacheasbitmap
 		return false;
 		#end
@@ -938,5 +945,9 @@ class CanvasRenderer extends CanvasRendererAPI
 		}
 
 		return updated;
+		#else
+		return false;
+		#end
 	}
 }
+#end

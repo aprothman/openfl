@@ -1,16 +1,13 @@
 package openfl.filters;
 
 #if !flash
+import openfl._internal.backend.lime.ImageDataUtil;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.ColorTransform;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if lime
-import lime._internal.graphics.ImageDataUtil; // TODO
-
-#end
 
 /**
 	The GlowFilter class lets you apply a glow effect to display objects. You
@@ -269,7 +266,7 @@ import lime._internal.graphics.ImageDataUtil; // TODO
 
 	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int, sourceBitmapData:BitmapData):Shader
 	{
-		#if !macro
+		#if (!macro && openfl_gl)
 		// First pass of inner glow is invert alpha
 		if (__inner && pass == 0)
 		{
@@ -563,7 +560,7 @@ private class BlurAlphaShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		uRadius.value = [0, 0];
 		uColor.value = [0, 0, 0, 0];
 		uStrength.value = [1];
@@ -604,7 +601,7 @@ private class CombineShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		offset.value = [0, 0];
 		#end
 	}
@@ -643,7 +640,7 @@ private class InnerCombineShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		offset.value = [0, 0];
 		#end
 	}
@@ -682,7 +679,7 @@ private class CombineKnockoutShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		offset.value = [0, 0];
 		#end
 	}
@@ -721,7 +718,7 @@ private class InnerCombineKnockoutShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		offset.value = [0, 0];
 		#end
 	}

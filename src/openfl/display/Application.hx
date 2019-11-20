@@ -1,12 +1,9 @@
 package openfl.display;
 
 import lime.graphics.opengl.GLContextAttributes;
+import openfl._internal.backend.lime.Application as LimeApplication;
+import openfl._internal.backend.lime.WindowAttributes;
 import openfl._internal.Lib;
-#if lime
-import lime.app.Application as LimeApplication;
-import lime.ui.WindowAttributes;
-import lime.graphics.RenderContextAttributes;
-#end
 
 /**
 	The Application class is a Lime Application instance that uses

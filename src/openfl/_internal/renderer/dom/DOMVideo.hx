@@ -1,5 +1,6 @@
 package openfl._internal.renderer.dom;
 
+#if openfl_html5
 import openfl.media.Video;
 
 @:access(openfl.media.Video)
@@ -9,7 +10,7 @@ class DOMVideo
 {
 	public static function clear(video:Video, renderer:DOMRenderer):Void
 	{
-		#if (js && html5)
+		#if openfl_html5
 		if (video.__active)
 		{
 			renderer.element.removeChild(video.__stream.__video);
@@ -20,7 +21,7 @@ class DOMVideo
 
 	public static function render(video:Video, renderer:DOMRenderer):Void
 	{
-		#if (js && html5)
+		#if openfl_html5
 		if (video.stage != null && video.__stream != null && video.__worldVisible && video.__renderable)
 		{
 			if (!video.__active)
@@ -47,3 +48,4 @@ class DOMVideo
 		#end
 	}
 }
+#end

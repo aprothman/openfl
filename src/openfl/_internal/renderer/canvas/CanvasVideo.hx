@@ -1,5 +1,6 @@
 package openfl._internal.renderer.canvas;
 
+#if openfl_html5
 import openfl.media.Video;
 
 @:access(openfl.media.Video)
@@ -9,7 +10,7 @@ class CanvasVideo
 {
 	public static function render(video:Video, renderer:CanvasRenderer):Void
 	{
-		#if (js && html5)
+		#if (lime && openfl_html5)
 		if (!video.__renderable || video.__stream == null) return;
 
 		var alpha = renderer.__getAlpha(video.__worldAlpha);
@@ -53,3 +54,4 @@ class CanvasVideo
 		#end
 	}
 }
+#end

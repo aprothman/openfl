@@ -1,16 +1,13 @@
 package openfl.filters;
 
 #if !flash
+import openfl._internal.backend.lime.ImageDataUtil;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.ColorTransform;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if lime
-import lime._internal.graphics.ImageDataUtil; // TODO
-
-#end
 
 /**
 	The DropShadowFilter class lets you add a drop shadow to display objects.
@@ -295,7 +292,7 @@ import lime._internal.graphics.ImageDataUtil; // TODO
 
 	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int, sourceBitmapData:BitmapData):Shader
 	{
-		#if !macro
+		#if (!macro && openfl_gl)
 		// Drop shadow is glow with an offset
 		if (__inner && pass == 0)
 		{
@@ -566,7 +563,7 @@ private class HideShader extends BitmapFilterShader
 	public function new()
 	{
 		super();
-		#if !macro
+		#if (!macro && openfl_gl)
 		offset.value = [0, 0];
 		#end
 	}

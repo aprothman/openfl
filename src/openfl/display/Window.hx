@@ -1,12 +1,10 @@
 package openfl.display;
 
-import openfl._internal.Lib;
-#if lime
-import lime.app.Application;
-import lime.ui.Window as LimeWindow;
-import lime.ui.WindowAttributes;
 import lime.graphics.RenderContextAttributes;
-#end
+import openfl._internal.backend.lime.Application;
+import openfl._internal.backend.lime.Window as LimeWindow;
+import openfl._internal.backend.lime.WindowAttributes;
+import openfl._internal.Lib;
 
 /**
 	The Window class is a Lime Window instance that automatically

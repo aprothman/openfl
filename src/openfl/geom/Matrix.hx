@@ -1,11 +1,9 @@
 package openfl.geom;
 
 #if !flash
+import openfl._internal.backend.math.Matrix3;
+import openfl._internal.backend.utils.Float32Array;
 import openfl._internal.utils.ObjectPool;
-#if lime
-import openfl._internal.utils.Float32Array;
-import lime.math.Matrix3;
-#end
 
 /**
 	The Matrix class represents a transformation matrix that determines how to
@@ -113,7 +111,7 @@ class Matrix
 	**/
 	public var ty:Float;
 
-	#if lime
+	#if openfl_gl
 	@:noCompletion private var __array:Float32Array;
 	#end
 
@@ -699,7 +697,7 @@ class Matrix
 		ty += dy;
 	}
 
-	#if lime
+	#if openfl_gl
 	@:noCompletion private function toArray(transpose:Bool = false):Float32Array
 	{
 		if (__array == null)

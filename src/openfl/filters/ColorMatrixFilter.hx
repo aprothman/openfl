@@ -1,15 +1,13 @@
 package openfl.filters;
 
 #if !flash
+import openfl._internal.backend.lime.ImageCanvasUtil;
+import openfl._internal.backend.math.RGBA;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if lime
-import lime._internal.graphics.ImageCanvasUtil; // TODO
-import lime.math.RGBA;
-#end
 
 /**
 	The ColorMatrixFilter class lets you apply a 4 x 5 matrix transformation
@@ -151,7 +149,7 @@ import lime.math.RGBA;
 		var sourceImage = sourceBitmapData.image;
 		var image = destBitmapData.image;
 
-		#if (js && html5)
+		#if openfl_html5
 		ImageCanvasUtil.convertToData(sourceImage);
 		ImageCanvasUtil.convertToData(image);
 		#end
@@ -272,7 +270,7 @@ private class ColorMatrixShader extends BitmapFilterShader
 	{
 		super();
 
-		#if !macro
+		#if (!macro && openfl_gl)
 		uMultipliers.value = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 		uOffsets.value = [0, 0, 0, 0];
 		#end
@@ -280,7 +278,7 @@ private class ColorMatrixShader extends BitmapFilterShader
 
 	public function init(matrix:Array<Float>):Void
 	{
-		#if !macro
+		#if (!macro && openfl_gl)
 		var multipliers = uMultipliers.value;
 		var offsets = uOffsets.value;
 

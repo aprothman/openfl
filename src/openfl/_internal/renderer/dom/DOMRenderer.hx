@@ -1,24 +1,21 @@
 package openfl._internal.renderer.dom;
 
-import js.html.Element;
-import lime._internal.graphics.ImageCanvasUtil;
-import lime.graphics.DOMRenderContext;
+#if openfl_html5
+import openfl._internal.backend.html5.Element;
+import openfl._internal.backend.lime.DOMRenderContext;
 import openfl._internal.renderer.canvas.CanvasRenderer;
 import openfl.display.Bitmap;
-import openfl.display.BitmapData;
 import openfl.display.BlendMode;
 import openfl.display.DOMElement;
 import openfl.display.DOMRenderer as DOMRendererAPI;
 import openfl.display.DisplayObject;
 import openfl.display.DisplayObjectContainer;
 import openfl.display.IBitmapDrawable;
-import openfl.display.Shape;
 import openfl.display.SimpleButton;
 import openfl.display.Tilemap;
 import openfl.events.RenderEvent;
 import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
-import openfl.geom.Point;
 import openfl.geom.Rectangle;
 import openfl.media.Video;
 import openfl.text.TextField;
@@ -90,7 +87,9 @@ class DOMRenderer extends DOMRendererAPI
 		__numClipRects = 0;
 		__z = 0;
 
+		#if lime
 		__type = DOM;
+		#end
 
 		__canvasRenderer = new CanvasRenderer(null);
 		__canvasRenderer.__domRenderer = this;
@@ -122,7 +121,7 @@ class DOMRenderer extends DOMRendererAPI
 
 	private function __applyStyle(displayObject:DisplayObject, setTransform:Bool, setAlpha:Bool, setClip:Bool):Void
 	{
-		#if (js && html5)
+		#if openfl_html5
 		var style = displayObject.__style;
 
 		// TODO: displayMatrix
@@ -278,7 +277,7 @@ class DOMRenderer extends DOMRendererAPI
 		}
 	}
 
-	#if (js && html5)
+	#if openfl_html5
 	private function __initializeElement(displayObject:DisplayObject, element:Element):Void
 	{
 		var style = displayObject.__style = element.style;
@@ -596,7 +595,7 @@ class DOMRenderer extends DOMRendererAPI
 
 	private function __renderTextField(textField:TextField):Void
 	{
-		#if (js && html5)
+		#if openfl_html5
 		textField.__domRender = true;
 		__canvasRenderer.__updateCacheBitmap(textField, textField.__forceCachedBitmapUpdate
 			|| /*!__worldColorTransform.__isDefault ()*/ false);
@@ -779,3 +778,4 @@ class DOMRenderer extends DOMRendererAPI
 		}
 	}
 }
+#end

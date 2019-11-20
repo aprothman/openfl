@@ -2,15 +2,12 @@ package openfl.filters;
 
 import haxe.Timer;
 #if !flash
+import openfl._internal.backend.lime.ImageDataUtil;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if lime
-import lime._internal.graphics.ImageDataUtil; // TODO
-
-#end
 
 /**
 	The BlurFilter class lets you apply a blur visual effect to display
@@ -313,14 +310,14 @@ private class BlurShader extends BitmapFilterShader
 	{
 		super();
 
-		#if !macro
+		#if (!macro && openfl_gl)
 		uRadius.value = [0, 0];
 		#end
 	}
 
 	@:noCompletion private override function __update():Void
 	{
-		#if !macro
+		#if (!macro && openfl_gl)
 		uTextureSize.value = [__texture.input.width, __texture.input.height];
 		#end
 
