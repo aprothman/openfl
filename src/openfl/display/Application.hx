@@ -1,6 +1,6 @@
 package openfl.display;
 
-import lime.graphics.opengl.GLContextAttributes;
+import lime.graphics.RenderContextAttributes;
 import openfl._internal.backend.lime.Application as LimeApplication;
 import openfl._internal.backend.lime.WindowAttributes;
 import openfl._internal.Lib;
