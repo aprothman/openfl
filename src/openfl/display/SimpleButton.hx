@@ -333,33 +333,18 @@ class SimpleButton extends InteractiveObject
 		return hitTest;
 	}
 
-	@:noCompletion private override function __setStageReference(stage:Stage):Void
+	@:noCompletion private override function __setTransformDirty(force:Bool = false):Void
 	{
-		super.__setStageReference(stage);
+		super.__setTransformDirty(force);
 
 		if (__currentState != null)
 		{
-			__currentState.__setStageReference(stage);
+			__currentState.__setTransformDirty(force);
 		}
 
 		if (hitTestState != null && hitTestState != __currentState)
 		{
-			hitTestState.__setStageReference(stage);
-		}
-	}
-
-	@:noCompletion private override function __setTransformDirty():Void
-	{
-		super.__setTransformDirty();
-
-		if (__currentState != null)
-		{
-			__currentState.__setTransformDirty();
-		}
-
-		if (hitTestState != null && hitTestState != __currentState)
-		{
-			hitTestState.__setTransformDirty();
+			hitTestState.__setTransformDirty(force);
 		}
 	}
 
@@ -378,21 +363,6 @@ class SimpleButton extends InteractiveObject
 			{
 				hitTestState.__update(transformOnly, true);
 			}
-		}
-	}
-
-	@:noCompletion private override function __updateTransforms(overrideTransform:Matrix = null):Void
-	{
-		super.__updateTransforms(overrideTransform);
-
-		if (__currentState != null)
-		{
-			__currentState.__updateTransforms();
-		}
-
-		if (hitTestState != null && hitTestState != __currentState)
-		{
-			hitTestState.__updateTransforms();
 		}
 	}
 
@@ -424,12 +394,14 @@ class SimpleButton extends InteractiveObject
 			if (__hitTestState != downState && __hitTestState != upState && __hitTestState != overState)
 			{
 				__hitTestState.__renderParent = null;
+				__hitTestState.__setTransformDirty();
 			}
 		}
 
 		if (hitTestState != null)
 		{
 			hitTestState.__renderParent = this;
+			hitTestState.__setTransformDirty();
 			hitTestState.__setRenderDirty();
 		}
 
@@ -487,6 +459,7 @@ class SimpleButton extends InteractiveObject
 		if (__currentState != null && __currentState != hitTestState)
 		{
 			__currentState.__renderParent = null;
+			__currentState.__setTransformDirty();
 		}
 
 		if (value != null && value.parent != null)
@@ -510,7 +483,7 @@ class SimpleButton extends InteractiveObject
 			{
 				if (__currentState != null)
 				{
-					__currentState.__setStageReference(null);
+					__currentState.__setStageReferences(null);
 					__previousStates.push(__currentState);
 				}
 
@@ -526,9 +499,11 @@ class SimpleButton extends InteractiveObject
 			if (value != null)
 			{
 				value.__renderParent = this;
+				value.__setTransformDirty();
 				value.__setRenderDirty();
 			}
 
+			__localBoundsDirty = true;
 			__setRenderDirty();
 		}
 

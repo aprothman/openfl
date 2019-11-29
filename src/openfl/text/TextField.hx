@@ -2243,6 +2243,18 @@ class TextField extends InteractiveObject
 		}
 	}
 
+	@:noCompletion private override function __update(transformOnly:Bool, updateChildren:Bool):Void
+	{
+		var transformDirty = __transformDirty;
+
+		super.__update(transformOnly, updateChildren);
+
+		if (transformDirty)
+		{
+			__renderTransform.__translateTransformed(__offsetX, __offsetY);
+		}
+	}
+
 	@:noCompletion private function __updateLayout():Void
 	{
 		if (__layoutDirty)
@@ -2391,12 +2403,6 @@ class TextField extends InteractiveObject
 
 			__textEngine.text = mask;
 		}
-	}
-
-	@:noCompletion private override function __updateTransforms(overrideTransform:Matrix = null):Void
-	{
-		super.__updateTransforms(overrideTransform);
-		__renderTransform.__translateTransformed(__offsetX, __offsetY);
 	}
 
 	// Getters & Setters
@@ -2589,9 +2595,10 @@ class TextField extends InteractiveObject
 		if (value != __textEngine.height)
 		{
 			__setTransformDirty();
+			__setParentRenderDirty();
+			__setRenderDirty();
 			__dirty = true;
 			__layoutDirty = true;
-			__setRenderDirty();
 
 			__textEngine.height = value;
 		}
@@ -2965,9 +2972,10 @@ class TextField extends InteractiveObject
 		if (value != __textEngine.width)
 		{
 			__setTransformDirty();
+			__setParentRenderDirty();
+			__setRenderDirty();
 			__dirty = true;
 			__layoutDirty = true;
-			__setRenderDirty();
 
 			__textEngine.width = value;
 		}
@@ -2999,7 +3007,12 @@ class TextField extends InteractiveObject
 
 	@:noCompletion private override function set_x(value:Float):Float
 	{
-		if (value != __transform.tx + __offsetX) __setTransformDirty();
+		if (value != __transform.tx + __offsetX)
+		{
+			__setTransformDirty();
+			__setParentRenderDirty();
+		}
+
 		return __transform.tx = value - __offsetX;
 	}
 
@@ -3010,7 +3023,12 @@ class TextField extends InteractiveObject
 
 	@:noCompletion private override function set_y(value:Float):Float
 	{
-		if (value != __transform.ty + __offsetY) __setTransformDirty();
+		if (value != __transform.ty + __offsetY)
+		{
+			__setTransformDirty();
+			__setParentRenderDirty();
+		}
+
 		return __transform.ty = value - __offsetY;
 	}
 

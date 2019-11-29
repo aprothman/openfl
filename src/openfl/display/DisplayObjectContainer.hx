@@ -69,7 +69,7 @@ class DisplayObjectContainer extends InteractiveObject
 	/**
 		Returns the number of children of this object.
 	**/
-	public var numChildren(get, never):Int;
+	public var numChildren(default, null):Int;
 
 	/**
 		Determines whether the children of the object are tab enabled. Enables or
@@ -90,15 +90,6 @@ class DisplayObjectContainer extends InteractiveObject
 	@:noCompletion private var __removedChildren:Vector<DisplayObject>;
 	@:noCompletion private var __tabChildren:Bool;
 
-	#if openfljs
-	@:noCompletion private static function __init__()
-	{
-		untyped Object.defineProperty(DisplayObjectContainer.prototype, "numChildren", {
-			get: untyped __js__("function () { return this.get_numChildren (); }")
-		});
-	}
-	#end
-
 	/**
 		Calling the `new DisplayObjectContainer()` constructor throws
 		an `ArgumentError` exception. You _can_, however, call
@@ -118,7 +109,7 @@ class DisplayObjectContainer extends InteractiveObject
 		mouseChildren = true;
 		__tabChildren = true;
 
-		__children = new Array<DisplayObject>();
+		numChildren = 0;
 		__removedChildren = new Vector<DisplayObject>();
 	}
 
@@ -154,7 +145,136 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function addChild(child:DisplayObject):DisplayObject
 	{
-		return addChildAt(child, numChildren);
+		if (child == null)
+		{
+			var error = new TypeError("Error #2007: Parameter child must be non-null.");
+			error.errorID = 2007;
+			throw error;
+		}
+		#if ((haxe_ver >= "3.4.0") || !cpp)
+		else if (child.stage == child)
+		{
+			var error = new ArgumentError("Error #3783: A Stage object cannot be added as the child of another object.");
+			error.errorID = 3783;
+			throw error;
+		}
+		#end
+
+		if (child.parent == this)
+		{
+			if (child != __lastChild)
+			{
+				if (child.__previousSibling != null)
+				{
+					child.__previousSibling.__nextSibling = child.__nextSibling;
+				}
+				else if (__firstChild == child)
+				{
+					__firstChild = child.__nextSibling;
+				}
+
+				child.__nextSibling.__previousSibling = child.__previousSibling;
+				child.__nextSibling = null;
+
+				if (__lastChild != null)
+				{
+					__lastChild.__nextSibling = child;
+					child.__previousSibling = __lastChild;
+				}
+				else
+				{
+					__firstChild = child;
+				}
+
+				__lastChild = child;
+				__setRenderDirty();
+				#if openfl_validate_children
+				__children.remove(child);
+				__children.push(child);
+				__validateChildren();
+				#end
+			}
+		}
+		else
+		{
+			if (child.parent != null)
+			{
+				child.parent.removeChild(child);
+			}
+
+			#if openfl_validate_children
+			__validateChildren();
+			#end
+
+			if (__lastChild != null)
+			{
+				__lastChild.__nextSibling = child;
+				child.__previousSibling = __lastChild;
+				child.__nextSibling = null;
+			}
+			else
+			{
+				__firstChild = child;
+				child.__previousSibling = null;
+				child.__nextSibling = null;
+			}
+
+			__lastChild = child;
+			child.parent = this;
+			numChildren++;
+
+			#if openfl_validate_children
+			__children.push(child);
+			__validateChildren();
+			#end
+
+			var addedToStage = (stage != null && child.stage == null);
+
+			if (addedToStage)
+			{
+				child.__setStageReferences(stage);
+			}
+
+			child.__setTransformDirty(true);
+			child.__setParentRenderDirty();
+			child.__setRenderDirty();
+			__localBoundsDirty = true;
+			__setRenderDirty();
+
+			#if !openfl_disable_event_pooling
+			var event = Event.__pool.get();
+			event.type = Event.ADDED;
+			#else
+			var event = new Event(Event.ADDED);
+			#end
+			event.bubbles = true;
+
+			event.target = child;
+
+			child.__dispatchWithCapture(event);
+
+			#if !openfl_disable_event_pooling
+			Event.__pool.release(event);
+			#end
+
+			if (addedToStage)
+			{
+				#if openfl_pool_events
+				event = Event.__pool.get(Event.ADDED_TO_STAGE);
+				#else
+				event = new Event(Event.ADDED_TO_STAGE, false, false);
+				#end
+
+				child.__dispatchWithCapture(event);
+				child.__dispatchChildren(event);
+
+				#if openfl_pool_events
+				Event.__pool.release(event);
+				#end
+			}
+		}
+
+		return child;
 	}
 
 	/**
@@ -190,6 +310,19 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function addChildAt(child:DisplayObject, index:Int):DisplayObject
 	{
+		#if openfl_validate_children
+		// __validateChildren();
+		#end
+
+		if (index >= numChildren - 1)
+		{
+			return addChild(child);
+		}
+
+		#if openfl_validate_children
+		__validateChildren();
+		#end
+
 		if (child == null)
 		{
 			var error = new TypeError("Error #2007: Parameter child must be non-null.");
@@ -205,19 +338,45 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 		#end
 
-		if (index > __children.length || index < 0)
+		if (index < 0 || index > numChildren)
 		{
 			throw "Invalid index position " + index;
 		}
 
 		if (child.parent == this)
 		{
-			if (__children[index] != child)
+			if (index == 0)
 			{
-				__children.remove(child);
-				__children.insert(index, child);
+				if (__firstChild != child)
+				{
+					child.__previousSibling.__nextSibling = child.__nextSibling;
 
-				__setRenderDirty();
+					if (child == __lastChild)
+					{
+						__lastChild = child.__previousSibling;
+					}
+
+					if (child.__nextSibling != null)
+					{
+						child.__nextSibling.__previousSibling = child.__previousSibling;
+					}
+
+					child.__previousSibling = null;
+					child.__nextSibling = __firstChild;
+					__firstChild.__previousSibling = child;
+					__firstChild = child;
+
+					__setRenderDirty();
+					#if openfl_validate_children
+					__children.remove(child);
+					__children.insert(index, child);
+					__validateChildren();
+					#end
+				}
+			}
+			else
+			{
+				swapChildren(child, getChildAt(index));
 			}
 		}
 		else
@@ -227,18 +386,55 @@ class DisplayObjectContainer extends InteractiveObject
 				child.parent.removeChild(child);
 			}
 
-			__children.insert(index, child);
+			var before = null;
+			if (index > 0)
+			{
+				before = __firstChild;
+				for (i in 0...(index - 1))
+				{
+					before = before.__nextSibling;
+				}
+			}
+
+			var after = (index == 0 ? __firstChild : before.__nextSibling);
+
+			child.__previousSibling = before;
+			child.__nextSibling = after;
+
+			if (before != null)
+			{
+				before.__nextSibling = child;
+			}
+
+			if (after != null)
+			{
+				after.__previousSibling = child;
+			}
+
+			if (index == 0)
+			{
+				__firstChild = child;
+			}
+
 			child.parent = this;
+			numChildren++;
+
+			#if openfl_validate_children
+			__children.insert(index, child);
+			__validateChildren();
+			#end
 
 			var addedToStage = (stage != null && child.stage == null);
 
 			if (addedToStage)
 			{
-				this.__setStageReference(stage);
+				child.__setStageReferences(stage);
 			}
 
-			child.__setTransformDirty();
+			child.__setTransformDirty(true);
+			child.__setParentRenderDirty();
 			child.__setRenderDirty();
+			__localBoundsDirty = true;
 			__setRenderDirty();
 
 			#if !openfl_disable_event_pooling
@@ -339,12 +535,18 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function getChildAt(index:Int):DisplayObject
 	{
-		if (index >= 0 && index < __children.length)
+		if (index < 0 || index > numChildren - 1)
 		{
-			return __children[index];
+			return null;
 		}
 
-		return null;
+		var child = __firstChild;
+		for (i in 0...index)
+		{
+			child = child.__nextSibling;
+		}
+
+		return child;
 	}
 
 	/**
@@ -367,10 +569,14 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function getChildByName(name:String):DisplayObject
 	{
-		for (child in __children)
+		var child = __firstChild;
+
+		do
 		{
 			if (child.name == name) return child;
+			child = child.__nextSibling;
 		}
+		while (child != null);
 
 		return null;
 	}
@@ -385,9 +591,12 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function getChildIndex(child:DisplayObject):Int
 	{
-		for (i in 0...__children.length)
+		var current = __firstChild;
+
+		for (i in 0...numChildren)
 		{
-			if (__children[i] == child) return i;
+			if (current == child) return i;
+			current = current.__nextSibling;
 		}
 
 		return -1;
@@ -444,7 +653,9 @@ class DisplayObjectContainer extends InteractiveObject
 		if (child != null && child.parent == this)
 		{
 			child.__setTransformDirty();
+			child.__setParentRenderDirty();
 			child.__setRenderDirty();
+			__localBoundsDirty = true;
 			__setRenderDirty();
 
 			var event = new Event(Event.REMOVED, true);
@@ -460,13 +671,43 @@ class DisplayObjectContainer extends InteractiveObject
 				var event = new Event(Event.REMOVED_FROM_STAGE, false, false);
 				child.__dispatchWithCapture(event);
 				child.__dispatchChildren(event);
-				child.__setStageReference(null);
+				child.__setStageReferences(null);
 			}
 
 			child.parent = null;
-			__children.remove(child);
+			numChildren--;
+
+			if (__firstChild == child)
+			{
+				__firstChild = child.__nextSibling;
+			}
+
+			if (__lastChild == child)
+			{
+				__lastChild = child.__previousSibling;
+			}
+
+			if (child.__previousSibling != null)
+			{
+				child.__previousSibling.__nextSibling = child.__nextSibling;
+			}
+
+			if (child.__nextSibling != null)
+			{
+				child.__nextSibling.__previousSibling = child.__previousSibling;
+			}
+
+			child.__previousSibling = null;
+			child.__nextSibling = null;
+
 			__removedChildren.push(child);
-			child.__setTransformDirty();
+			child.__setTransformDirty(true);
+			child.__setParentRenderDirty();
+
+			#if openfl_validate_children
+			__children.remove(child);
+			__validateChildren();
+			#end
 		}
 
 		return child;
@@ -496,9 +737,17 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function removeChildAt(index:Int):DisplayObject
 	{
-		if (index >= 0 && index < __children.length)
+		if (index >= 0 && index < numChildren)
 		{
-			return removeChild(__children[index]);
+			var child = __firstChild;
+			for (i in 0...numChildren)
+			{
+				if (i == index)
+				{
+					return removeChild(child);
+				}
+				child = child.__nextSibling;
+			}
 		}
 
 		return null;
@@ -519,7 +768,7 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		if (endIndex == 0x7FFFFFFF)
 		{
-			endIndex = __children.length - 1;
+			endIndex = numChildren - 1;
 
 			if (endIndex < 0)
 			{
@@ -527,36 +776,31 @@ class DisplayObjectContainer extends InteractiveObject
 			}
 		}
 
-		if (beginIndex > __children.length - 1)
+		if (beginIndex > numChildren - 1)
 		{
 			return;
 		}
-		else if (endIndex < beginIndex || beginIndex < 0 || endIndex > __children.length)
+		else if (endIndex < beginIndex || beginIndex < 0 || endIndex > numChildren)
 		{
 			throw new RangeError("The supplied index is out of bounds.");
 		}
 
+		var child = __firstChild;
+		for (i in 0...beginIndex)
+		{
+			child = child.__nextSibling;
+		}
+
 		var numRemovals = endIndex - beginIndex;
+		var next = null;
+
 		while (numRemovals >= 0)
 		{
-			removeChildAt(beginIndex);
+			next = child.__nextSibling;
+			removeChild(child);
+			child = next;
 			numRemovals--;
 		}
-	}
-
-	@:noCompletion private function resolve(fieldName:String):DisplayObject
-	{
-		if (__children == null) return null;
-
-		for (child in __children)
-		{
-			if (child.name == fieldName)
-			{
-				return child;
-			}
-		}
-
-		return null;
 	}
 
 	/**
@@ -597,10 +841,26 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function setChildIndex(child:DisplayObject, index:Int):Void
 	{
-		if (index >= 0 && index <= __children.length && child.parent == this)
+		if (index >= 0 && index <= numChildren && numChildren > 1 && child.parent == this)
 		{
+			#if openfl_validate_children
+			var copy = __children.copy();
+			#end
+			if (index >= numChildren)
+			{
+				addChild(child);
+			}
+			else
+			{
+				var other = getChildAt(index);
+				swapChildren(child, other);
+			}
+			#if openfl_validate_children
+			__children = copy;
 			__children.remove(child);
 			__children.insert(index, child);
+			__validateChildren();
+			#end
 		}
 	}
 
@@ -630,15 +890,43 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function swapChildren(child1:DisplayObject, child2:DisplayObject):Void
 	{
-		if (child1.parent == this && child2.parent == this)
+		if (child1.parent == this && child2.parent == this && child1 != child2)
 		{
-			var index1 = __children.indexOf(child1);
-			var index2 = __children.indexOf(child2);
+			var prev = child1.__previousSibling;
+			var next = child1.__nextSibling;
 
-			__children[index1] = child2;
-			__children[index2] = child1;
+			child1.__previousSibling = (child2.__previousSibling != child1 ? child2.__previousSibling : child2);
+			child1.__nextSibling = (child2.__nextSibling != child1 ? child2.__nextSibling : child2);
+
+			child2.__previousSibling = (prev != child2 ? prev : child1);
+			child2.__nextSibling = (next != child2 ? next : child1);
+
+			if (__firstChild == child1)
+			{
+				__firstChild = child2;
+			}
+			else if (__firstChild == child2)
+			{
+				__firstChild = child1;
+			}
+
+			if (__lastChild == child1)
+			{
+				__lastChild = child2;
+			}
+			else if (__lastChild == child2)
+			{
+				__lastChild = child1;
+			}
 
 			__setRenderDirty();
+			#if openfl_validate_children
+			var index1 = __children.indexOf(child1);
+			var index2 = __children.indexOf(child2);
+			__children[index1] = child2;
+			__children[index2] = child1;
+			__validateChildren();
+			#end
 		}
 	}
 
@@ -653,20 +941,38 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function swapChildrenAt(index1:Int, index2:Int):Void
 	{
-		var swap:DisplayObject = __children[index1];
-		__children[index1] = __children[index2];
-		__children[index2] = swap;
-		swap = null;
-		__setRenderDirty();
+		if (index1 >= 0 && index1 < numChildren && index1 != index2 && index2 >= 0 && index2 < numChildren)
+		{
+			var child1 = null, child2 = null;
+			var current = __firstChild;
+
+			for (i in 0...numChildren)
+			{
+				if (i == index1)
+				{
+					child1 = current;
+				}
+				else if (i == index2)
+				{
+					child2 = current;
+				}
+				current = current.__nextSibling;
+			}
+
+			swapChildren(child1, child2);
+			__setRenderDirty();
+		}
 	}
 
 	@:noCompletion private override function __cleanup():Void
 	{
 		super.__cleanup();
 
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
 			child.__cleanup();
+			child = child.__nextSibling;
 		}
 
 		__cleanupRemovedChildren();
@@ -687,27 +993,18 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __dispatchChildren(event:Event):Void
 	{
-		if (__children != null)
+		var child = __firstChild;
+		while (child != null)
 		{
-			for (child in __children)
+			event.target = child;
+
+			if (!child.__dispatchWithCapture(event))
 			{
-				event.target = child;
-
-				if (!child.__dispatchWithCapture(event))
-				{
-					break;
-				}
-
-				child.__dispatchChildren(event);
+				break;
 			}
-		}
-	}
 
-	@:noCompletion private override function __enterFrame(deltaTime:Int):Void
-	{
-		for (child in __children)
-		{
-			child.__enterFrame(deltaTime);
+			child.__dispatchChildren(event);
+			child = child.__nextSibling;
 		}
 	}
 
@@ -715,17 +1012,19 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		super.__getBounds(rect, matrix);
 
-		if (__children.length == 0) return;
+		if (numChildren == 0) return;
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
-			if (child.__scaleX == 0 || child.__scaleY == 0) continue;
-
-			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
-
-			child.__getBounds(rect, childWorldTransform);
+			if (child.__scaleX != 0 && child.__scaleY != 0)
+			{
+				DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
+				child.__getBounds(rect, childWorldTransform);
+			}
+			child = child.__nextSibling;
 		}
 
 		Matrix.__pool.release(childWorldTransform);
@@ -736,17 +1035,19 @@ class DisplayObjectContainer extends InteractiveObject
 		super.__getFilterBounds(rect, matrix);
 		if (__scrollRect != null) return;
 
-		if (__children.length == 0) return;
+		if (numChildren == 0) return;
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
-			if (child.__scaleX == 0 || child.__scaleY == 0 || child.__isMask) continue;
-
-			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
-
-			child.__getFilterBounds(rect, childWorldTransform);
+			if (child.__scaleX != 0 && child.__scaleY != 0 && !child.__isMask)
+			{
+				DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
+				child.__getFilterBounds(rect, childWorldTransform);
+			}
+			child = child.__nextSibling;
 		}
 
 		Matrix.__pool.release(childWorldTransform);
@@ -764,17 +1065,19 @@ class DisplayObjectContainer extends InteractiveObject
 			super.__getBounds(rect, matrix);
 		}
 
-		if (__children.length == 0) return;
+		if (numChildren == 0) return;
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
-			if (child.__scaleX == 0 || child.__scaleY == 0 || child.__isMask) continue;
-
-			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
-
-			child.__getRenderBounds(rect, childWorldTransform);
+			if (child.__scaleX != 0 && child.__scaleY != 0 && !child.__isMask)
+			{
+				DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
+				child.__getRenderBounds(rect, childWorldTransform);
+			}
+			child = child.__nextSibling;
 		}
 
 		Matrix.__pool.release(childWorldTransform);
@@ -801,14 +1104,14 @@ class DisplayObjectContainer extends InteractiveObject
 			Point.__pool.release(point);
 		}
 
-		var i = __children.length;
+		var child = __lastChild;
 		if (interactiveOnly)
 		{
 			if (stack == null || !mouseChildren)
 			{
-				while (--i >= 0)
+				while (child != null)
 				{
-					if (__children[i].__hitTest(x, y, shapeFlag, null, true, cast __children[i]))
+					if (child.__hitTest(x, y, shapeFlag, null, true, cast child))
 					{
 						if (stack != null)
 						{
@@ -817,6 +1120,7 @@ class DisplayObjectContainer extends InteractiveObject
 
 						return true;
 					}
+					child = child.__previousSibling;
 				}
 			}
 			else if (stack != null)
@@ -826,13 +1130,13 @@ class DisplayObjectContainer extends InteractiveObject
 				var interactive = false;
 				var hitTest = false;
 
-				while (--i >= 0)
+				while (child != null)
 				{
-					interactive = __children[i].__getInteractive(null);
+					interactive = child.__getInteractive(null);
 
 					if (interactive || (mouseEnabled && !hitTest))
 					{
-						if (__children[i].__hitTest(x, y, shapeFlag, stack, true, cast __children[i]))
+						if (child.__hitTest(x, y, shapeFlag, stack, true, cast child))
 						{
 							hitTest = true;
 
@@ -842,6 +1146,7 @@ class DisplayObjectContainer extends InteractiveObject
 							}
 						}
 					}
+					child = child.__previousSibling;
 				}
 
 				if (hitTest)
@@ -855,13 +1160,14 @@ class DisplayObjectContainer extends InteractiveObject
 		{
 			var hitTest = false;
 
-			while (--i >= 0)
+			while (child != null)
 			{
-				if (__children[i].__hitTest(x, y, shapeFlag, stack, false, cast __children[i]))
+				if (child.__hitTest(x, y, shapeFlag, stack, false, cast child))
 				{
 					hitTest = true;
 					if (stack == null) break;
 				}
+				child = child.__previousSibling;
 			}
 
 			return hitTest;
@@ -872,14 +1178,15 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __hitTestMask(x:Float, y:Float):Bool
 	{
-		var i = __children.length;
+		var child = __lastChild;
 
-		while (--i >= 0)
+		while (child != null)
 		{
-			if (__children[i].__hitTestMask(x, y))
+			if (child.__hitTestMask(x, y))
 			{
 				return true;
 			}
+			child = child.__previousSibling;
 		}
 
 		return false;
@@ -891,47 +1198,39 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (recurse)
 		{
-			for (child in __children)
+			var child = __firstChild;
+			while (child != null)
 			{
 				child.__readGraphicsData(graphicsData, recurse);
+				child = child.__nextSibling;
 			}
 		}
 	}
 
-	@:noCompletion private override function __setStageReference(stage:Stage):Void
+	@:noCompletion private override function __setTransformDirty(force:Bool = false):Void
 	{
-		super.__setStageReference(stage);
+		__transformDirty = true;
 
-		if (__children != null)
+		if (!__childTransformDirty || force)
 		{
-			for (child in __children)
+			var child = __firstChild;
+			while (child != null)
 			{
-				child.__setStageReference(stage);
+				child.__setTransformDirty(force);
+				child = child.__nextSibling;
 			}
-		}
-	}
 
-	@:noCompletion private override function __setWorldTransformInvalid():Void
-	{
-		if (!__worldTransformInvalid)
-		{
-			__worldTransformInvalid = true;
-
-			if (__children != null)
-			{
-				for (child in __children)
-				{
-					child.__setWorldTransformInvalid();
-				}
-			}
+			__childTransformDirty = true;
 		}
 	}
 
 	@:noCompletion private override function __stopAllMovieClips():Void
 	{
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
 			child.__stopAllMovieClips();
+			child = child.__nextSibling;
 		}
 	}
 
@@ -944,7 +1243,8 @@ class DisplayObjectContainer extends InteractiveObject
 		var interactive = false;
 		var interactiveObject:InteractiveObject = null;
 
-		for (child in __children)
+		var child = __firstChild;
+		while (child != null)
 		{
 			interactive = child.__getInteractive(null);
 
@@ -953,6 +1253,7 @@ class DisplayObjectContainer extends InteractiveObject
 				interactiveObject = cast child;
 				interactiveObject.__tabTest(stack);
 			}
+			child = child.__nextSibling;
 		}
 	}
 
@@ -962,19 +1263,123 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (updateChildren)
 		{
-			for (child in __children)
+			var child = __firstChild;
+			while (child != null)
 			{
 				child.__update(transformOnly, true);
+				child = child.__nextSibling;
 			}
 		}
+
+		// Ensure children are marked as dirty again
+		// as we no longer know if they all are dirty
+		// since at least one has been updated
+		__childTransformDirty = false;
 	}
+
+	#if openfl_validate_children
+	@:noCompletion private function __validateChildren():Void
+	{
+		var numChildrenCorrect = (numChildren == __children.length);
+		var firstChildMatches = (__firstChild == __children[0]);
+		var lastChildMatches = (__lastChild == __children[__children.length - 1]);
+
+		var map = new Map<DisplayObject, Bool>();
+
+		trace("------------");
+		trace((firstChildMatches ? "CORRECT" : "ERROR") + " - FIRST CHILD: " + (__firstChild != null ? __firstChild.name : null));
+		trace((lastChildMatches ? "CORRECT" : "ERROR") + " - LAST CHILD: " + (__lastChild != null ? __lastChild.name : null));
+		trace((numChildrenCorrect ? "CORRECT" : "ERROR") + " - NUM CHILDREN: " + numChildren);
+
+		var child = __firstChild;
+		var i = 0;
+		while (child != null)
+		{
+			var childMatches = (child == __children[i]);
+			var parentMatches = (__children[i] != null && child.parent == __children[i].parent);
+			var prevSiblingMatches = (child.__previousSibling == __children[i - 1]);
+			var nextSiblingMatches = (child.__nextSibling == __children[i + 1]);
+
+			trace((childMatches ? "CORRECT" : "ERROR") + " - > CHILD [" + i + "]: " + child.name + " (should be "
+				+ (__children[i] != null ? __children[i].name : null) + ")");
+			trace((parentMatches ? "CORRECT" : "ERROR") + " - -- PARENT: " + (child.parent != null ? child.parent.name : null));
+			trace((prevSiblingMatches ? "CORRECT" : "ERROR")
+				+ " - -- PREV SIBLING: "
+				+ (child.__previousSibling != null ? child.__previousSibling.name : null));
+			trace((nextSiblingMatches ? "CORRECT" : "ERROR") + " - -- NEXT SIBLING: " + (child.__nextSibling != null ? child.__nextSibling.name : null));
+
+			if (map.exists(child))
+			{
+				throw "ERROR: Duplicate child detected";
+			}
+			else
+			{
+				map[child] = true;
+			}
+
+			child = child.__nextSibling;
+			i++;
+		}
+
+		child = __firstChild;
+		if (__firstChild != __children[0])
+		{
+			throw "ERROR: firstChild does not match";
+		}
+		if (child != null)
+		{
+			if (child.__previousSibling != null)
+			{
+				throw "ERROR: firstChild.__previousSibling is not null";
+			}
+			if (__lastChild != __children[__children.length - 1])
+			{
+				throw "ERROR: lastChild does not match";
+			}
+			if (__lastChild.__nextSibling != null)
+			{
+				throw "ERROR: lastChild.__nextSibling is not null";
+			}
+		}
+
+		var child = __firstChild;
+		var i = 0;
+		while (child != null)
+		{
+			if (child != __children[i])
+			{
+				throw "ERROR: child " + i + " does not match";
+			}
+			if (i > 0)
+			{
+				if (child.__previousSibling == null)
+				{
+					throw "ERROR: child.__previousSibling at index " + i + " is null";
+				}
+				else if (child.__previousSibling != __children[i - 1])
+				{
+					throw "ERROR: child.__previousSibling at index " + i + " does not match";
+				}
+			}
+			if (i < __children.length - 1)
+			{
+				if (child.__nextSibling == null)
+				{
+					throw "ERROR: child.__nextSibling at index " + i + " is null";
+				}
+				else if (child.__nextSibling != __children[i + 1])
+				{
+					throw "ERROR: child.__nextSibling at index " + i + " does not match";
+				}
+			}
+
+			child = child.__nextSibling;
+			i++;
+		}
+	}
+	#end
 
 	// Get & Set Methods
-	@:noCompletion private function get_numChildren():Int
-	{
-		return __children.length;
-	}
-
 	@:noCompletion private function get_tabChildren():Bool
 	{
 		return __tabChildren;

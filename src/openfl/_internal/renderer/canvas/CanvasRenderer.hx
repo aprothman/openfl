@@ -288,7 +288,7 @@ class CanvasRenderer extends CanvasRendererAPI
 			{
 				case BITMAP:
 					__renderBitmap(cast object);
-				case DISPLAY_OBJECT_CONTAINER:
+				case DISPLAY_OBJECT_CONTAINER, MOVIE_CLIP:
 					__renderDisplayObjectContainer(cast object);
 				case DISPLAY_OBJECT, SHAPE:
 					__renderShape(cast object);
@@ -345,21 +345,24 @@ class CanvasRenderer extends CanvasRendererAPI
 
 		__pushMaskObject(container);
 
+		var child = container.__firstChild;
 		if (__stage != null)
 		{
-			for (child in container.__children)
+			while (child != null)
 			{
 				__renderDisplayObject(child);
 				child.__renderDirty = false;
+				child = child.__nextSibling;
 			}
 
 			container.__renderDirty = false;
 		}
 		else
 		{
-			for (child in container.__children)
+			while (child != null)
 			{
 				__renderDisplayObject(child);
+				child = child.__nextSibling;
 			}
 		}
 
@@ -375,7 +378,7 @@ class CanvasRenderer extends CanvasRendererAPI
 				case BITMAP:
 					context.rect(0, 0, mask.width, mask.height);
 
-				case DISPLAY_OBJECT_CONTAINER:
+				case DISPLAY_OBJECT_CONTAINER, MOVIE_CLIP:
 					var container:DisplayObjectContainer = cast mask;
 					if (__domRenderer == null) container.__cleanupRemovedChildren();
 
@@ -384,9 +387,11 @@ class CanvasRenderer extends CanvasRendererAPI
 						CanvasGraphics.renderMask(container.__graphics, this);
 					}
 
-					for (child in container.__children)
+					var child = container.__firstChild;
+					while (child != null)
 					{
 						__renderMask(child);
+						child = child.__nextSibling;
 					}
 
 				case DOM_ELEMENT:
@@ -604,7 +609,7 @@ class CanvasRenderer extends CanvasRendererAPI
 			if (__worldColorTransform != null) colorTransform.__combine(__worldColorTransform);
 
 			var needRender = (object.__cacheBitmap == null
-				|| (object.__renderDirty && (force || (object.__children != null && object.__children.length > 0)))
+				|| (object.__renderDirty && (force || object.__firstChild != null))
 				|| object.opaqueBackground != object.__cacheBitmapBackground)
 				|| (object.__graphics != null && object.__graphics.__softwareDirty)
 				|| !object.__cacheBitmapColorTransform.__equals(colorTransform, true);

@@ -178,7 +178,7 @@ class DOMRenderer extends DOMRendererAPI
 			{
 				case BITMAP:
 					__clearBitmap(cast object);
-				case DISPLAY_OBJECT_CONTAINER:
+				case DISPLAY_OBJECT_CONTAINER, MOVIE_CLIP:
 					__clearDisplayObjectContainer(cast object);
 				case DOM_ELEMENT:
 					__clearDOMElement(cast object);
@@ -211,9 +211,11 @@ class DOMRenderer extends DOMRendererAPI
 
 		__clearShape(cast container);
 
-		for (child in container.__children)
+		var child = container.__firstChild;
+		while (child != null)
 		{
 			__clearDisplayObject(child);
+			child = child.__nextSibling;
 		}
 	}
 
@@ -431,7 +433,7 @@ class DOMRenderer extends DOMRendererAPI
 			{
 				case BITMAP:
 					__renderBitmap(cast object);
-				case DISPLAY_OBJECT_CONTAINER:
+				case DISPLAY_OBJECT_CONTAINER, MOVIE_CLIP:
 					__renderDisplayObjectContainer(cast object);
 				case DOM_ELEMENT:
 					__renderDOMElement(cast object);
@@ -505,21 +507,24 @@ class DOMRenderer extends DOMRendererAPI
 
 			__pushMaskObject(container);
 
+			var child = container.__firstChild;
 			if (__stage != null)
 			{
-				for (child in container.__children)
+				while (child != null)
 				{
 					__renderDisplayObject(child);
 					child.__renderDirty = false;
+					child = child.__nextSibling;
 				}
 
 				container.__renderDirty = false;
 			}
 			else
 			{
-				for (child in container.__children)
+				while (child != null)
 				{
 					__renderDisplayObject(child);
+					child = child.__nextSibling;
 				}
 			}
 
@@ -584,7 +589,7 @@ class DOMRenderer extends DOMRendererAPI
 		{
 			if (button.__currentState.stage != button.stage)
 			{
-				button.__currentState.__setStageReference(button.stage);
+				button.__currentState.__setStageReferences(button.stage);
 			}
 
 			__renderDisplayObject(button.__currentState);
