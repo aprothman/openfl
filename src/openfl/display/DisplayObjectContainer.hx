@@ -10,6 +10,8 @@ import openfl.geom.Point;
 import openfl.geom.Rectangle;
 import openfl.Vector;
 
+using openfl._internal.utils.DisplayObjectLinkedList;
+
 /**
 	The DisplayObjectContainer class is the base class for all objects that can
 	serve as display object containers on the display list. The display list
@@ -162,71 +164,14 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (child.parent == this)
 		{
-			if (child != __lastChild)
+			if (child != __lastChild && (__firstChild != __lastChild))
 			{
-				if (child.__previousSibling != null)
-				{
-					child.__previousSibling.__nextSibling = child.__nextSibling;
-				}
-				else if (__firstChild == child)
-				{
-					__firstChild = child.__nextSibling;
-				}
-
-				child.__nextSibling.__previousSibling = child.__previousSibling;
-				child.__nextSibling = null;
-
-				if (__lastChild != null)
-				{
-					__lastChild.__nextSibling = child;
-					child.__previousSibling = __lastChild;
-				}
-				else
-				{
-					__firstChild = child;
-				}
-
-				__lastChild = child;
-				__setRenderDirty();
-				#if openfl_validate_children
-				__children.remove(child);
-				__children.push(child);
-				__validateChildren();
-				#end
+				this.__addChild(child);
 			}
 		}
 		else
 		{
-			if (child.parent != null)
-			{
-				child.parent.removeChild(child);
-			}
-
-			#if openfl_validate_children
-			__validateChildren();
-			#end
-
-			if (__lastChild != null)
-			{
-				__lastChild.__nextSibling = child;
-				child.__previousSibling = __lastChild;
-				child.__nextSibling = null;
-			}
-			else
-			{
-				__firstChild = child;
-				child.__previousSibling = null;
-				child.__nextSibling = null;
-			}
-
-			__lastChild = child;
-			child.parent = this;
-			numChildren++;
-
-			#if openfl_validate_children
-			__children.push(child);
-			__validateChildren();
-			#end
+			this.__addChild(child);
 
 			var addedToStage = (stage != null && child.stage == null);
 
@@ -310,18 +255,10 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function addChildAt(child:DisplayObject, index:Int):DisplayObject
 	{
-		#if openfl_validate_children
-		// __validateChildren();
-		#end
-
-		if (index >= numChildren - 1)
+		if (index >= numChildren)
 		{
 			return addChild(child);
 		}
-
-		#if openfl_validate_children
-		__validateChildren();
-		#end
 
 		if (child == null)
 		{
@@ -349,80 +286,20 @@ class DisplayObjectContainer extends InteractiveObject
 			{
 				if (__firstChild != child)
 				{
-					child.__previousSibling.__nextSibling = child.__nextSibling;
-
-					if (child == __lastChild)
-					{
-						__lastChild = child.__previousSibling;
-					}
-
-					if (child.__nextSibling != null)
-					{
-						child.__nextSibling.__previousSibling = child.__previousSibling;
-					}
-
-					child.__previousSibling = null;
-					child.__nextSibling = __firstChild;
-					__firstChild.__previousSibling = child;
-					__firstChild = child;
-
+					this.__unshiftChild(child);
 					__setRenderDirty();
-					#if openfl_validate_children
-					__children.remove(child);
-					__children.insert(index, child);
-					__validateChildren();
-					#end
 				}
 			}
 			else
 			{
-				swapChildren(child, getChildAt(index));
+				this.__swapChildren(child, getChildAt(index));
+				__setRenderDirty();
 			}
 		}
 		else
 		{
-			if (child.parent != null)
-			{
-				child.parent.removeChild(child);
-			}
-
-			var before = null;
-			if (index > 0)
-			{
-				before = __firstChild;
-				for (i in 0...(index - 1))
-				{
-					before = before.__nextSibling;
-				}
-			}
-
-			var after = (index == 0 ? __firstChild : before.__nextSibling);
-
-			child.__previousSibling = before;
-			child.__nextSibling = after;
-
-			if (before != null)
-			{
-				before.__nextSibling = child;
-			}
-
-			if (after != null)
-			{
-				after.__previousSibling = child;
-			}
-
-			if (index == 0)
-			{
-				__firstChild = child;
-			}
-
-			child.parent = this;
-			numChildren++;
-
-			#if openfl_validate_children
-			__children.insert(index, child);
-			__validateChildren();
-			#end
+			this.__insertChildAt(child, index);
+			__setRenderDirty();
 
 			var addedToStage = (stage != null && child.stage == null);
 
@@ -570,14 +447,14 @@ class DisplayObjectContainer extends InteractiveObject
 	public function getChildByName(name:String):DisplayObject
 	{
 		var child = __firstChild;
-
-		do
+		while (child != null)
 		{
-			if (child.name == name) return child;
+			if (child.name == name)
+			{
+				return child;
+			}
 			child = child.__nextSibling;
 		}
-		while (child != null);
-
 		return null;
 	}
 
@@ -674,40 +551,11 @@ class DisplayObjectContainer extends InteractiveObject
 				child.__setStageReferences(null);
 			}
 
-			child.parent = null;
-			numChildren--;
-
-			if (__firstChild == child)
-			{
-				__firstChild = child.__nextSibling;
-			}
-
-			if (__lastChild == child)
-			{
-				__lastChild = child.__previousSibling;
-			}
-
-			if (child.__previousSibling != null)
-			{
-				child.__previousSibling.__nextSibling = child.__nextSibling;
-			}
-
-			if (child.__nextSibling != null)
-			{
-				child.__nextSibling.__previousSibling = child.__previousSibling;
-			}
-
-			child.__previousSibling = null;
-			child.__nextSibling = null;
+			this.__removeChild(child);
 
 			__removedChildren.push(child);
 			child.__setTransformDirty(true);
 			child.__setParentRenderDirty();
-
-			#if openfl_validate_children
-			__children.remove(child);
-			__validateChildren();
-			#end
 		}
 
 		return child;
@@ -803,6 +651,21 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 	}
 
+	@:noCompletion private function resolve(fieldName:String):DisplayObject
+	{
+		var child = __firstChild;
+		while (child != null)
+		{
+			if (child.name == fieldName)
+			{
+				return child;
+			}
+			child = child.__nextSibling;
+		}
+
+		return null;
+	}
+
 	/**
 		Changes the position of an existing child in the display object container.
 		This affects the layering of child objects. For example, the following
@@ -846,20 +709,25 @@ class DisplayObjectContainer extends InteractiveObject
 			#if openfl_validate_children
 			var copy = __children.copy();
 			#end
-			if (index >= numChildren)
+			if (index == 0)
 			{
-				addChild(child);
+				this.__unshiftChild(child);
+			}
+			else if (index >= numChildren)
+			{
+				this.__addChild(child);
 			}
 			else
 			{
 				var other = getChildAt(index);
-				swapChildren(child, other);
+				this.__insertChildBefore(child, other);
 			}
+			__setRenderDirty();
 			#if openfl_validate_children
 			__children = copy;
 			__children.remove(child);
 			__children.insert(index, child);
-			__validateChildren();
+			@:privateAccess DisplayObjectLinkedList.__validateChildren(this, "setChildIndex");
 			#end
 		}
 	}
@@ -892,41 +760,8 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		if (child1.parent == this && child2.parent == this && child1 != child2)
 		{
-			var prev = child1.__previousSibling;
-			var next = child1.__nextSibling;
-
-			child1.__previousSibling = (child2.__previousSibling != child1 ? child2.__previousSibling : child2);
-			child1.__nextSibling = (child2.__nextSibling != child1 ? child2.__nextSibling : child2);
-
-			child2.__previousSibling = (prev != child2 ? prev : child1);
-			child2.__nextSibling = (next != child2 ? next : child1);
-
-			if (__firstChild == child1)
-			{
-				__firstChild = child2;
-			}
-			else if (__firstChild == child2)
-			{
-				__firstChild = child1;
-			}
-
-			if (__lastChild == child1)
-			{
-				__lastChild = child2;
-			}
-			else if (__lastChild == child2)
-			{
-				__lastChild = child1;
-			}
-
+			this.__swapChildren(child1, child2);
 			__setRenderDirty();
-			#if openfl_validate_children
-			var index1 = __children.indexOf(child1);
-			var index2 = __children.indexOf(child2);
-			__children[index1] = child2;
-			__children[index2] = child1;
-			__validateChildren();
-			#end
 		}
 	}
 
@@ -959,7 +794,7 @@ class DisplayObjectContainer extends InteractiveObject
 				current = current.__nextSibling;
 			}
 
-			swapChildren(child1, child2);
+			this.__swapChildren(child1, child2);
 			__setRenderDirty();
 		}
 	}
@@ -1276,108 +1111,6 @@ class DisplayObjectContainer extends InteractiveObject
 		// since at least one has been updated
 		__childTransformDirty = false;
 	}
-
-	#if openfl_validate_children
-	@:noCompletion private function __validateChildren():Void
-	{
-		var numChildrenCorrect = (numChildren == __children.length);
-		var firstChildMatches = (__firstChild == __children[0]);
-		var lastChildMatches = (__lastChild == __children[__children.length - 1]);
-
-		var map = new Map<DisplayObject, Bool>();
-
-		trace("------------");
-		trace((firstChildMatches ? "CORRECT" : "ERROR") + " - FIRST CHILD: " + (__firstChild != null ? __firstChild.name : null));
-		trace((lastChildMatches ? "CORRECT" : "ERROR") + " - LAST CHILD: " + (__lastChild != null ? __lastChild.name : null));
-		trace((numChildrenCorrect ? "CORRECT" : "ERROR") + " - NUM CHILDREN: " + numChildren);
-
-		var child = __firstChild;
-		var i = 0;
-		while (child != null)
-		{
-			var childMatches = (child == __children[i]);
-			var parentMatches = (__children[i] != null && child.parent == __children[i].parent);
-			var prevSiblingMatches = (child.__previousSibling == __children[i - 1]);
-			var nextSiblingMatches = (child.__nextSibling == __children[i + 1]);
-
-			trace((childMatches ? "CORRECT" : "ERROR") + " - > CHILD [" + i + "]: " + child.name + " (should be "
-				+ (__children[i] != null ? __children[i].name : null) + ")");
-			trace((parentMatches ? "CORRECT" : "ERROR") + " - -- PARENT: " + (child.parent != null ? child.parent.name : null));
-			trace((prevSiblingMatches ? "CORRECT" : "ERROR")
-				+ " - -- PREV SIBLING: "
-				+ (child.__previousSibling != null ? child.__previousSibling.name : null));
-			trace((nextSiblingMatches ? "CORRECT" : "ERROR") + " - -- NEXT SIBLING: " + (child.__nextSibling != null ? child.__nextSibling.name : null));
-
-			if (map.exists(child))
-			{
-				throw "ERROR: Duplicate child detected";
-			}
-			else
-			{
-				map[child] = true;
-			}
-
-			child = child.__nextSibling;
-			i++;
-		}
-
-		child = __firstChild;
-		if (__firstChild != __children[0])
-		{
-			throw "ERROR: firstChild does not match";
-		}
-		if (child != null)
-		{
-			if (child.__previousSibling != null)
-			{
-				throw "ERROR: firstChild.__previousSibling is not null";
-			}
-			if (__lastChild != __children[__children.length - 1])
-			{
-				throw "ERROR: lastChild does not match";
-			}
-			if (__lastChild.__nextSibling != null)
-			{
-				throw "ERROR: lastChild.__nextSibling is not null";
-			}
-		}
-
-		var child = __firstChild;
-		var i = 0;
-		while (child != null)
-		{
-			if (child != __children[i])
-			{
-				throw "ERROR: child " + i + " does not match";
-			}
-			if (i > 0)
-			{
-				if (child.__previousSibling == null)
-				{
-					throw "ERROR: child.__previousSibling at index " + i + " is null";
-				}
-				else if (child.__previousSibling != __children[i - 1])
-				{
-					throw "ERROR: child.__previousSibling at index " + i + " does not match";
-				}
-			}
-			if (i < __children.length - 1)
-			{
-				if (child.__nextSibling == null)
-				{
-					throw "ERROR: child.__nextSibling at index " + i + " is null";
-				}
-				else if (child.__nextSibling != __children[i + 1])
-				{
-					throw "ERROR: child.__nextSibling at index " + i + " does not match";
-				}
-			}
-
-			child = child.__nextSibling;
-			i++;
-		}
-	}
-	#end
 
 	// Get & Set Methods
 	@:noCompletion private function get_tabChildren():Bool
