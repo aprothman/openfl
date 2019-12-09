@@ -56,14 +56,13 @@ class DrawTrianglesShader extends Shader
 	}
 }
 
-@:enum private abstract Attrib(String) from String to String
+enum private abstract Attrib(String) from String to String
 {
 	var Position = DefAttrib.Position;
 	var TexCoord = DefAttrib.TexCoord;
 	var Color = DefAttrib.Color;
 }
-
-@:enum private abstract Uniform(String) from String to String
+enum private abstract Uniform(String) from String to String
 {
 	var UseTexture = "uUseTexture";
 	var Sampler = DefUniform.Sampler;
@@ -73,6 +72,5 @@ class DrawTrianglesShader extends Shader
 	var ColorMultiplier = DefUniform.ColorMultiplier;
 	var ColorOffset = DefUniform.ColorOffset;
 }
-
 typedef DrawTrianglesAttrib = Attrib;
 typedef DrawTrianglesUniform = Uniform;

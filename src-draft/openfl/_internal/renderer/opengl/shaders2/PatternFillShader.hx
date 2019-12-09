@@ -62,12 +62,11 @@ class PatternFillShader extends Shader
 	}
 }
 
-@:enum private abstract Attrib(String) to String from String
+enum private abstract Attrib(String) to String from String
 {
 	var Position = DefAttrib.Position;
 }
-
-@:enum private abstract Uniform(String) from String to String
+enum private abstract Uniform(String) from String to String
 {
 	var TranslationMatrix = "uTranslationMatrix";
 	var PatternMatrix = "uPatternMatrix";
@@ -80,6 +79,5 @@ class PatternFillShader extends Shader
 	var ColorMultiplier = DefUniform.ColorMultiplier;
 	var ColorOffset = DefUniform.ColorOffset;
 }
-
 typedef PatternFillAttrib = Attrib;
 typedef PatternFillUniform = Uniform;

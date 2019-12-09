@@ -5,7 +5,7 @@ import openfl.media.SoundTransform;
 
 extern class SimpleButton extends InteractiveObject
 {
-	@:noCompletion public static var __constructor:SimpleButton->Void;
+	@:noCompletion public static var __constructor:(simpleButton:SimpleButton) -> Void;
 	public var downState:DisplayObject;
 	public var enabled:Bool;
 	public var hitTestState:DisplayObject;
@@ -17,7 +17,6 @@ extern class SimpleButton extends InteractiveObject
 	public function new(upState:DisplayObject = null, overState:DisplayObject = null, downState:DisplayObject = null, hitTestState:DisplayObject = null);
 }
 
-@:access(openfl._internal.symbols.SWFSymbol)
 @:noCompletion class SimpleButton2 extends SimpleButton
 {
 	public function new()

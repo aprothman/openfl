@@ -49,14 +49,13 @@ class DefaultShader extends Shader
 }
 
 // TODO Find a way to apply these default attributes and uniforms to other shaders
-@:enum private abstract Attrib(String) from String to String
+enum private abstract Attrib(String) from String to String
 {
 	var Position = "aPosition";
 	var TexCoord = "aTexCoord0";
 	var Color = "aColor";
 }
-
-@:enum private abstract Uniform(String) from String to String
+enum private abstract Uniform(String) from String to String
 {
 	var Sampler = "uSampler0";
 	var ProjectionMatrix = "uProjectionMatrix";
@@ -65,6 +64,5 @@ class DefaultShader extends Shader
 	var ColorMultiplier = "uColorMultiplier";
 	var ColorOffset = "uColorOffset";
 }
-
 typedef DefAttrib = Attrib;
 typedef DefUniform = Uniform;

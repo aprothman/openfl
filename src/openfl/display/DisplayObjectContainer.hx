@@ -8,6 +8,7 @@ import openfl.events.Event;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
+import openfl.text.TextField;
 import openfl.Vector;
 
 using openfl._internal.utils.DisplayObjectLinkedList;
@@ -39,10 +40,12 @@ using openfl._internal.utils.DisplayObjectLinkedList;
 #end
 @:access(openfl.events.Event)
 @:access(openfl.display.Graphics)
+@:access(openfl.display.SimpleButton)
 @:access(openfl.errors.Error)
 @:access(openfl.geom.Point)
 @:access(openfl.geom.Matrix)
 @:access(openfl.geom.Rectangle)
+@:access(openfl.text.TextField)
 class DisplayObjectContainer extends InteractiveObject
 {
 	/**
@@ -153,24 +156,20 @@ class DisplayObjectContainer extends InteractiveObject
 			error.errorID = 2007;
 			throw error;
 		}
-		#if ((haxe_ver >= "3.4.0") || !cpp)
 		else if (child.stage == child)
 		{
 			var error = new ArgumentError("Error #3783: A Stage object cannot be added as the child of another object.");
 			error.errorID = 3783;
 			throw error;
 		}
-		#end
 
 		if (child.parent == this)
 		{
-			if (child != __lastChild && (__firstChild != __lastChild))
-			{
-				this.__addChild(child);
-			}
+			this.__addChild(child);
 		}
 		else
 		{
+			this.__reparent(child);
 			this.__addChild(child);
 
 			var addedToStage = (stage != null && child.stage == null);
@@ -255,7 +254,7 @@ class DisplayObjectContainer extends InteractiveObject
 	**/
 	public function addChildAt(child:DisplayObject, index:Int):DisplayObject
 	{
-		if (index >= numChildren)
+		if (index == numChildren)
 		{
 			return addChild(child);
 		}
@@ -266,14 +265,12 @@ class DisplayObjectContainer extends InteractiveObject
 			error.errorID = 2007;
 			throw error;
 		}
-		#if ((haxe_ver >= "3.4.0") || !cpp)
 		else if (child.stage == child)
 		{
 			var error = new ArgumentError("Error #3783: A Stage object cannot be added as the child of another object.");
 			error.errorID = 3783;
 			throw error;
 		}
-		#end
 
 		if (index < 0 || index > numChildren)
 		{
@@ -298,6 +295,7 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 		else
 		{
+			this.__reparent(child);
 			this.__insertChildAt(child, index);
 			__setRenderDirty();
 
@@ -418,9 +416,12 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 
 		var child = __firstChild;
-		for (i in 0...index)
+		if (child != null)
 		{
-			child = child.__nextSibling;
+			for (i in 0...index)
+			{
+				child = child.__nextSibling;
+			}
 		}
 
 		return child;
@@ -469,13 +470,14 @@ class DisplayObjectContainer extends InteractiveObject
 	public function getChildIndex(child:DisplayObject):Int
 	{
 		var current = __firstChild;
-
-		for (i in 0...numChildren)
+		if (current != null)
 		{
-			if (current == child) return i;
-			current = current.__nextSibling;
+			for (i in 0...numChildren)
+			{
+				if (current == child) return i;
+				current = current.__nextSibling;
+			}
 		}
-
 		return -1;
 	}
 
@@ -588,13 +590,16 @@ class DisplayObjectContainer extends InteractiveObject
 		if (index >= 0 && index < numChildren)
 		{
 			var child = __firstChild;
-			for (i in 0...numChildren)
+			if (child != null)
 			{
-				if (i == index)
+				for (i in 0...numChildren)
 				{
-					return removeChild(child);
+					if (i == index)
+					{
+						return removeChild(child);
+					}
+					child = child.__nextSibling;
 				}
-				child = child.__nextSibling;
 			}
 		}
 
@@ -634,9 +639,12 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 
 		var child = __firstChild;
-		for (i in 0...beginIndex)
+		if (child != null)
 		{
-			child = child.__nextSibling;
+			for (i in 0...beginIndex)
+			{
+				child = child.__nextSibling;
+			}
 		}
 
 		var numRemovals = endIndex - beginIndex;
@@ -649,21 +657,6 @@ class DisplayObjectContainer extends InteractiveObject
 			child = next;
 			numRemovals--;
 		}
-	}
-
-	@:noCompletion private function resolve(fieldName:String):DisplayObject
-	{
-		var child = __firstChild;
-		while (child != null)
-		{
-			if (child.name == fieldName)
-			{
-				return child;
-			}
-			child = child.__nextSibling;
-		}
-
-		return null;
 	}
 
 	/**
@@ -713,21 +706,20 @@ class DisplayObjectContainer extends InteractiveObject
 			{
 				this.__unshiftChild(child);
 			}
-			else if (index >= numChildren)
+			else if (index >= numChildren - 1)
 			{
 				this.__addChild(child);
 			}
 			else
 			{
-				var other = getChildAt(index);
-				this.__insertChildBefore(child, other);
+				this.__insertChildAt(child, index);
 			}
 			__setRenderDirty();
 			#if openfl_validate_children
 			__children = copy;
 			__children.remove(child);
 			__children.insert(index, child);
-			@:privateAccess DisplayObjectLinkedList.__validateChildren(this, "setChildIndex");
+			this.__validateChildren("setChildIndex");
 			#end
 		}
 	}
@@ -781,17 +773,20 @@ class DisplayObjectContainer extends InteractiveObject
 			var child1 = null, child2 = null;
 			var current = __firstChild;
 
-			for (i in 0...numChildren)
+			if (current != null)
 			{
-				if (i == index1)
+				for (i in 0...numChildren)
 				{
-					child1 = current;
+					if (i == index1)
+					{
+						child1 = current;
+					}
+					else if (i == index2)
+					{
+						child2 = current;
+					}
+					current = current.__nextSibling;
 				}
-				else if (i == index2)
-				{
-					child2 = current;
-				}
-				current = current.__nextSibling;
 			}
 
 			this.__swapChildren(child1, child2);
@@ -1094,21 +1089,53 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __update(transformOnly:Bool, updateChildren:Bool):Void
 	{
-		super.__update(transformOnly, updateChildren);
+		__updateSingle(transformOnly, updateChildren);
 
 		if (updateChildren)
 		{
-			var child = __firstChild;
-			while (child != null)
+			for (child in __allChildren())
 			{
-				child.__update(transformOnly, true);
-				child = child.__nextSibling;
+				var transformDirty = child.__transformDirty;
+
+				// TODO: Flatten masks
+				child.__updateSingle(transformOnly, updateChildren);
+
+				switch (child.__type)
+				{
+					case SIMPLE_BUTTON:
+						// TODO: Flatten this into the allChildren() call?
+						if (updateChildren)
+						{
+							var button:SimpleButton = cast child;
+							if (button.__currentState != null)
+							{
+								button.__currentState.__update(transformOnly, true);
+							}
+
+							if (button.hitTestState != null && button.hitTestState != button.__currentState)
+							{
+								button.hitTestState.__update(transformOnly, true);
+							}
+						}
+
+					case TEXTFIELD:
+						if (transformDirty)
+						{
+							var textField:TextField = cast child;
+							textField.__renderTransform.__translateTransformed(textField.__offsetX, textField.__offsetY);
+						}
+
+					case DISPLAY_OBJECT_CONTAINER, MOVIE_CLIP:
+						// Ensure children are marked as dirty again
+						// as we no longer know if they all are dirty
+						// since at least one has been updated
+						child.__childTransformDirty = false;
+
+					default:
+				}
 			}
 		}
 
-		// Ensure children are marked as dirty again
-		// as we no longer know if they all are dirty
-		// since at least one has been updated
 		__childTransformDirty = false;
 	}
 
