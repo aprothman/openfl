@@ -49,7 +49,7 @@ class ApplicationMain
 		_app.meta["hxtelemetry-allocations"] = "::config.hxtelemetry.allocations::";
 		_app.meta["hxtelemetry-host"] = "::config.hxtelemetry.host::";
 		#end::end::
-		
+
 		// only create window and execute app if noautoexec define Doesn't exists
 		#if !noautoexec
 		createWindows();
@@ -193,7 +193,8 @@ class ApplicationMain
 			trace("ApplicationMain: getEntryPoint called");
 			stage.dispatchEvent(new openfl.events.Event(openfl.events.Event.RESIZE, false, false));
 			trace("ApplicationMain: stage.dispatchEvent RESIZE called");
-			if (stage.window.fullscreen) {
+			if (stage.limeWindow.fullscreen)
+			{
 				stage.dispatchEvent(new openfl.events.FullScreenEvent(openfl.events.FullScreenEvent.FULL_SCREEN, false, false, true, true));
 			}
 		} catch (e:Dynamic) {
@@ -311,7 +312,7 @@ class ApplicationMain
 		};
 
 		var loader = new neko.vm.Loader(untyped $loader);
-		loader.addPath(haxe.io.Path.directory(sys_program_path));
+		loader.addPath(haxe.io.Path.directory(#if (haxe_ver >= 3.3) sys_program_path #else Sys.executablePath() #end));
 		loader.addPath("./");
 		loader.addPath("@executable_path/");
 		#end

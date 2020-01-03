@@ -10,13 +10,17 @@ import haxe.io.FPHelper;
 import haxe.Json;
 import haxe.Serializer;
 import haxe.Unserializer;
-import openfl._internal.backend.lime.BytePointer;
-import openfl._internal.backend.lime.Bytes as LimeBytes;
-import openfl._internal.backend.lime.DataPointer;
-import openfl._internal.backend.lime.System;
 import openfl._internal.backend.utils.ArrayBuffer;
 import openfl.errors.EOFError;
 import openfl.net.ObjectEncoding;
+#if lime
+import lime.system.System;
+import lime.utils.BytePointer;
+import lime.utils.Bytes as LimeBytes;
+import lime.utils.DataPointer;
+#elseif openfl_html5
+import openfl._internal.backend.lime_standalone.LimeBytes;
+#end
 #if format
 import format.amf.Reader as AMFReader;
 import format.amf.Tools as AMFTools;
@@ -360,7 +364,7 @@ abstract ByteArray(ByteArrayData) from ByteArrayData to ByteArrayData
 	**/
 	public static function fromFile(path:String):ByteArray
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		return LimeBytes.fromFile(path);
 		#else
 		return null;
@@ -428,7 +432,7 @@ abstract ByteArray(ByteArrayData) from ByteArrayData to ByteArrayData
 	**/
 	public static function loadFromBytes(bytes:Bytes):Future<ByteArray>
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		return LimeBytes.loadFromBytes(bytes).then(function(limeBytes:LimeBytes)
 		{
 			var byteArray:ByteArray = limeBytes;
@@ -450,7 +454,7 @@ abstract ByteArray(ByteArrayData) from ByteArrayData to ByteArrayData
 	**/
 	public static function loadFromFile(path:String):Future<ByteArray>
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		return LimeBytes.loadFromFile(path).then(function(limeBytes:LimeBytes)
 		{
 			var byteArray:ByteArray = limeBytes;
@@ -1128,7 +1132,7 @@ abstract ByteArray(ByteArrayData) from ByteArrayData to ByteArrayData
 
 	public function compress(algorithm:CompressionAlgorithm = ZLIB):Void
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		#if js
 		if (__length > #if lime_bytes_length_getter l #else length #end)
 		{
@@ -1523,7 +1527,7 @@ abstract ByteArray(ByteArrayData) from ByteArrayData to ByteArrayData
 
 	public function uncompress(algorithm:CompressionAlgorithm = ZLIB):Void
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		#if js
 		if (__length > #if lime_bytes_length_getter l #else length #end)
 		{

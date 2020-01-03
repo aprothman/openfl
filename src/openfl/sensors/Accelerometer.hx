@@ -2,8 +2,6 @@ package openfl.sensors;
 
 #if !flash
 import haxe.Timer;
-import openfl._internal.backend.lime.Sensor;
-import openfl._internal.backend.lime.SensorType;
 import openfl.errors.ArgumentError;
 import openfl.events.AccelerometerEvent;
 import openfl.events.EventDispatcher;
@@ -117,7 +115,7 @@ class Accelerometer extends EventDispatcher
 		setRequestedUpdateInterval(defaultInterval);
 	}
 
-	override public function addEventListener(type:String, listener:(event:Dynamic) -> Void, useCapture:Bool = false, priority:Int = 0,
+	override public function addEventListener(type:String, listener:Dynamic->Void, useCapture:Bool = false, priority:Int = 0,
 			useWeakReference:Bool = false):Void
 	{
 		super.addEventListener(type, listener, useCapture, priority, useWeakReference);
@@ -126,20 +124,13 @@ class Accelerometer extends EventDispatcher
 
 	@:noCompletion private static function initialize():Void
 	{
+		#if (lime || openfl_html5)
 		if (!initialized)
 		{
-			#if lime
-			var sensors = Sensor.getSensors(SensorType.ACCELEROMETER);
-
-			if (sensors.length > 0)
-			{
-				sensors[0].onUpdate.add(accelerometer_onUpdate);
-				supported = true;
-			}
-			#end
-
+			AccelerometerBackend.initialize();
 			initialized = true;
 		}
+		#end
 	}
 
 	/**
@@ -196,14 +187,6 @@ class Accelerometer extends EventDispatcher
 		dispatchEvent(event);
 	}
 
-	// Event Handlers
-	@:noCompletion private static function accelerometer_onUpdate(x:Float, y:Float, z:Float):Void
-	{
-		currentX = x;
-		currentY = y;
-		currentZ = z;
-	}
-
 	// Getters & Setters
 	@:noCompletion private static function get_isSupported():Bool
 	{
@@ -225,6 +208,14 @@ class Accelerometer extends EventDispatcher
 		return value;
 	}
 }
+
+#if lime
+private typedef AccelerometerBackend = openfl._internal.backend.lime.LimeAccelerometerBackend;
+#elseif openfl_html5
+private typedef AccelerometerBackend = openfl._internal.backend.html5.HTML5AccelerometerBackend;
+#else
+private typedef AccelerometerBackend = openfl._internal.backend.dummy.DummyAccelerometerBackend;
+#end
 #else
 typedef Accelerometer = flash.sensors.Accelerometer;
 #end

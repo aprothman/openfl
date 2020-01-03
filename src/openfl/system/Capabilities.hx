@@ -2,12 +2,6 @@ package openfl.system;
 
 #if !flash
 import haxe.macro.Compiler;
-import openfl._internal.backend.lime.Locale;
-import openfl._internal.backend.lime.System;
-import openfl._internal.Lib;
-#if linux
-import sys.io.Process;
-#end
 
 /**
 	The Capabilities class provides properties that describe the system and
@@ -91,7 +85,7 @@ import sys.io.Process;
 @:fileXml('tags="haxe,release"')
 @:noDebug
 #end
-final class Capabilities
+@:final class Capabilities
 {
 	/**
 		Specifies whether access to the user's camera and microphone has been
@@ -471,8 +465,6 @@ final class Capabilities
 	**/
 	public static var version(get, never):String;
 
-	@:noCompletion private static var __standardDensities:Array<Int> = [120, 160, 240, 320, 480, 640, 800, 960];
-
 	#if openfljs
 	@:noCompletion private static function __init__()
 	{
@@ -587,83 +579,17 @@ final class Capabilities
 
 	@:noCompletion private static function get_language():String
 	{
-		#if lime
-		var language = Locale.currentLocale.language;
-
-		if (language != null)
-		{
-			language = language.toLowerCase();
-
-			switch (language)
-			{
-				case "cs", "da", "nl", "en", "fi", "fr", "de", "hu", "it", "ja", "ko", "nb", "pl", "pt", "ru", "es", "sv", "tr":
-					return language;
-
-				case "zh":
-					var region = Locale.currentLocale.region;
-
-					if (region != null)
-					{
-						switch (region.toUpperCase())
-						{
-							case "TW", "HANT":
-								return "zh-TW";
-
-							default:
-						}
-					}
-
-					return "zh-CN";
-
-				default:
-					return "xu";
-			}
-		}
-		#end
-
-		return "en";
+		return CapabilitiesBackend.getLanguage();
 	}
 
 	@:noCompletion private static inline function get_manufacturer():String
 	{
-		#if mac
-		return "OpenFL Macintosh";
-		#elseif linux
-		return "OpenFL Linux";
-		#elseif lime
-		var name = System.platformName;
-		return "OpenFL" + (name != null ? " " + name : "");
-		#else
-		return null;
-		#end
+		return CapabilitiesBackend.getManufacturer();
 	}
 
 	@:noCompletion private static inline function get_os():String
 	{
-		#if lime
-		#if (ios || tvos)
-		return System.deviceModel;
-		#elseif mac
-		return "Mac OS " + System.platformVersion;
-		#elseif linux
-		var kernelVersion = "";
-		try
-		{
-			var process = new Process("uname", ["-r"]);
-			kernelVersion = StringTools.trim(process.stdout.readLine().toString());
-			process.close();
-		}
-		catch (e:Dynamic) {}
-		if (kernelVersion != "") return "Linux " + kernelVersion;
-		else
-			return "Linux";
-		#else
-		var label = System.platformLabel;
-		return label != null ? label : "";
-		#end
-		#else
-		return null;
-		#end
+		return CapabilitiesBackend.getOS();
 	}
 
 	@:noCompletion private static function get_pixelAspectRatio():Float
@@ -673,110 +599,17 @@ final class Capabilities
 
 	@:noCompletion private static function get_screenDPI():Float
 	{
-		#if lime
-		var window = Lib.application != null ? Lib.application.window : null;
-		var screenDPI:Float;
-
-		#if (desktop || web)
-		screenDPI = 72;
-
-		if (window != null)
-		{
-			screenDPI *= window.scale;
-		}
-		#else
-		screenDPI = __standardDensities[0];
-
-		if (window != null)
-		{
-			var display = window.display;
-
-			if (display != null)
-			{
-				var actual = display.dpi;
-
-				var closestValue = screenDPI;
-				var closestDifference = Math.abs(actual - screenDPI);
-				var difference:Float;
-
-				for (density in __standardDensities)
-				{
-					difference = Math.abs(actual - density);
-
-					if (difference < closestDifference)
-					{
-						closestDifference = difference;
-						closestValue = density;
-					}
-				}
-
-				screenDPI = closestValue;
-			}
-		}
-		#end
-
-		return screenDPI;
-		#else
-		return 72;
-		#end
+		return CapabilitiesBackend.getScreenDPI();
 	}
 
 	@:noCompletion private static function get_screenResolutionX():Float
 	{
-		#if lime
-		var stage = Lib.current.stage;
-		var resolutionX = 0;
-
-		if (stage == null) return 0;
-
-		if (stage.window != null)
-		{
-			var display = stage.window.display;
-
-			if (display != null)
-			{
-				resolutionX = Math.ceil(display.currentMode.width * stage.window.scale);
-			}
-		}
-
-		if (resolutionX > 0)
-		{
-			return resolutionX;
-		}
-
-		return stage.stageWidth;
-		#else
-		return 0;
-		#end
+		return CapabilitiesBackend.getScreenResolutionX();
 	}
 
 	@:noCompletion private static function get_screenResolutionY():Float
 	{
-		#if lime
-		var stage = Lib.current.stage;
-		var resolutionY = 0;
-
-		if (stage == null) return 0;
-
-		if (stage.window != null)
-		{
-			var display = stage.window.display;
-
-			if (display != null)
-			{
-				resolutionY = Math.ceil(display.currentMode.height * stage.window.scale);
-			}
-		}
-
-		if (resolutionY > 0)
-		{
-			return resolutionY;
-		}
-
-		return stage.stageHeight;
-		#else
-		return 0;
-		#end
+		return CapabilitiesBackend.getScreenResolutionY();
 	}
 
 	@:noCompletion private static function get_version():String
@@ -811,6 +644,14 @@ final class Capabilities
 		return value;
 	}
 }
+
+#if lime
+private typedef CapabilitiesBackend = openfl._internal.backend.lime.LimeCapabilitiesBackend;
+#elseif openfl_html5
+private typedef CapabilitiesBackend = openfl._internal.backend.html5.HTML5CapabilitiesBackend;
+#else
+private typedef CapabilitiesBackend = openfl._internal.backend.dummy.DummyCapabilitiesBackend;
+#end
 #else
 typedef Capabilities = flash.system.Capabilities;
 #end

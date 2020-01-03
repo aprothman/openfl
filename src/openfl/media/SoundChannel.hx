@@ -1,7 +1,6 @@
 package openfl.media;
 
 #if !flash
-import openfl._internal.backend.lime.AudioSource;
 import openfl.events.Event;
 import openfl.events.EventDispatcher;
 
@@ -20,7 +19,7 @@ import openfl.events.EventDispatcher;
 @:noDebug
 #end
 @:access(openfl.media.SoundMixer)
-@:keep final class SoundChannel extends EventDispatcher
+@:final @:keep class SoundChannel extends EventDispatcher
 {
 	/**
 		The current amplitude(volume) of the left channel, from 0(silent) to 1
@@ -56,11 +55,8 @@ import openfl.events.EventDispatcher;
 	**/
 	public var soundTransform(get, set):SoundTransform;
 
-	@:noCompletion private var __isValid:Bool;
+	@:noCompletion private var __backend:SoundChannelBackend;
 	@:noCompletion private var __soundTransform:SoundTransform;
-	#if lime
-	@:noCompletion private var __source:AudioSource;
-	#end
 
 	#if openfljs
 	@:noCompletion private static function __init__()
@@ -78,7 +74,7 @@ import openfl.events.EventDispatcher;
 	}
 	#end
 
-	@:noCompletion private function new(source:#if lime AudioSource #else Dynamic #end = null, soundTransform:SoundTransform = null):Void
+	@:noCompletion private function new(sound:Sound = null, startTime:Float = 0, loops:Int = 0, soundTransform:SoundTransform = null):Void
 	{
 		super(this);
 
@@ -87,25 +83,18 @@ import openfl.events.EventDispatcher;
 
 		if (soundTransform != null)
 		{
-			__soundTransform = soundTransform;
+			__soundTransform = soundTransform.clone();
 		}
 		else
 		{
 			__soundTransform = new SoundTransform();
 		}
 
-		#if lime
-		if (source != null)
+		if (sound != null)
 		{
-			__source = source;
-			__source.onComplete.add(source_onComplete);
-			__isValid = true;
-
-			__source.play();
+			SoundMixer.__registerSoundChannel(this);
+			__backend = new SoundChannelBackend(this, sound, startTime, loops);
 		}
-		#end
-
-		SoundMixer.__registerSoundChannel(this);
 	}
 
 	/**
@@ -115,24 +104,26 @@ import openfl.events.EventDispatcher;
 	{
 		SoundMixer.__unregisterSoundChannel(this);
 
-		if (!__isValid) return;
+		if (__backend == null) return;
 
-		#if lime
-		__source.stop();
-		#end
+		__backend.stop();
 		__dispose();
 	}
 
 	@:noCompletion private function __dispose():Void
 	{
-		if (!__isValid) return;
+		if (__backend == null) return;
 
-		#if lime
-		__source.onComplete.remove(source_onComplete);
-		__source.dispose();
-		__source = null;
-		#end
-		__isValid = false;
+		__backend.dispose();
+		__backend = null;
+	}
+
+	@:noCompletion private function __onComplete():Void
+	{
+		SoundMixer.__unregisterSoundChannel(this);
+
+		__dispose();
+		dispatchEvent(new Event(Event.SOUND_COMPLETE));
 	}
 
 	@:noCompletion private function __updateTransform():Void
@@ -143,22 +134,16 @@ import openfl.events.EventDispatcher;
 	// Get & Set Methods
 	@:noCompletion private function get_position():Float
 	{
-		if (!__isValid) return 0;
+		if (__backend == null) return 0;
 
-		#if lime
-		return __source.currentTime + __source.offset;
-		#else
-		return 0;
-		#end
+		return __backend.getPosition();
 	}
 
 	@:noCompletion private function set_position(value:Float):Float
 	{
-		if (!__isValid) return 0;
+		if (__backend == null) return 0;
 
-		#if lime
-		__source.currentTime = Std.int(value) - __source.offset;
-		#end
+		__backend.setPosition(value);
 		return value;
 	}
 
@@ -174,40 +159,23 @@ import openfl.events.EventDispatcher;
 			__soundTransform.pan = value.pan;
 			__soundTransform.volume = value.volume;
 
-			var pan = SoundMixer.__soundTransform.pan + __soundTransform.pan;
-
-			if (pan < -1) pan = -1;
-			if (pan > 1) pan = 1;
-
-			var volume = SoundMixer.__soundTransform.volume * __soundTransform.volume;
-
-			if (__isValid)
+			if (__backend != null)
 			{
-				#if lime
-				__source.gain = volume;
-
-				var position = __source.position;
-				position.x = pan;
-				position.z = -1 * Math.sqrt(1 - Math.pow(pan, 2));
-				__source.position = position;
-
-				return value;
-				#end
+				__backend.setSoundTransform(value);
 			}
 		}
 
 		return value;
 	}
-
-	// Event Handlers
-	@:noCompletion private function source_onComplete():Void
-	{
-		SoundMixer.__unregisterSoundChannel(this);
-
-		__dispose();
-		dispatchEvent(new Event(Event.SOUND_COMPLETE));
-	}
 }
+
+#if lime
+private typedef SoundChannelBackend = openfl._internal.backend.lime.LimeSoundChannelBackend;
+#elseif openfl_html5
+private typedef SoundChannelBackend = openfl._internal.backend.howlerjs.HowlerSoundChannelBackend;
+#else
+private typedef SoundChannelBackend = openfl._internal.backend.dummy.DummySoundChannelBackend;
+#end
 #else
 typedef SoundChannel = flash.media.SoundChannel;
 #end

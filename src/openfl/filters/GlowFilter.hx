@@ -62,7 +62,7 @@ import openfl.geom.Rectangle;
 @:access(openfl.geom.ColorTransform)
 @:access(openfl.geom.Point)
 @:access(openfl.geom.Rectangle)
-final class GlowFilter extends BitmapFilter
+@:final class GlowFilter extends BitmapFilter
 {
 	@:noCompletion private static var __invertAlphaShader = new InvertAlphaShader();
 	@:noCompletion private static var __blurAlphaShader = new BlurAlphaShader();
@@ -239,9 +239,9 @@ final class GlowFilter extends BitmapFilter
 	@:noCompletion private override function __applyFilter(bitmapData:BitmapData, sourceBitmapData:BitmapData, sourceRect:Rectangle,
 			destPoint:Point):BitmapData
 	{
+		#if (lime || openfl_html5)
 		// TODO: Support knockout, inner
 
-		#if lime
 		var r = (__color >> 16) & 0xFF;
 		var g = (__color >> 8) & 0xFF;
 		var b = __color & 0xFF;

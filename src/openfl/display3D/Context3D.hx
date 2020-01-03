@@ -5,10 +5,6 @@ import openfl._internal.backend.gl.GLBuffer;
 import openfl._internal.backend.gl.GLFramebuffer;
 import openfl._internal.backend.gl.GLTexture;
 import openfl._internal.backend.gl.GL;
-import openfl._internal.backend.gl.WebGLRenderingContext;
-import openfl._internal.backend.lime.Image;
-import openfl._internal.backend.lime.ImageBuffer;
-import openfl._internal.backend.lime.RenderContext;
 import openfl._internal.backend.math.Rectangle as LimeRectangle;
 import openfl._internal.backend.math.Vector2;
 import openfl._internal.renderer.context3D.Context3DState;
@@ -33,6 +29,17 @@ import openfl.geom.Point;
 import openfl.geom.Rectangle;
 import openfl.utils.AGALMiniAssembler;
 import openfl.utils.ByteArray;
+#if (!lime && openfl_html5)
+import openfl._internal.backend.lime_standalone.Image;
+import openfl._internal.backend.lime_standalone.ImageBuffer;
+import openfl._internal.backend.lime_standalone.RenderContext;
+import openfl._internal.backend.lime_standalone.WebGLRenderContext;
+#else
+import openfl._internal.backend.lime.Image;
+import openfl._internal.backend.lime.ImageBuffer;
+import openfl._internal.backend.lime.RenderContext;
+import openfl._internal.backend.gl.WebGLRenderingContext in WebGLRenderContext;
+#end
 
 /**
 	The Context3D class provides a context for rendering geometrically defined graphics.
@@ -144,7 +151,7 @@ import openfl.utils.ByteArray;
 @:access(openfl.display.Stage3D)
 @:access(openfl.geom.Point)
 @:access(openfl.geom.Rectangle)
-final class Context3D extends EventDispatcher
+@:final class Context3D extends EventDispatcher
 {
 	/**
 		Indicates if Context3D supports video texture.
@@ -258,14 +265,14 @@ final class Context3D extends EventDispatcher
 	@:noCompletion private static var __glMemoryTotalAvailable:Int = -1;
 	@:noCompletion private static var __glTextureMaxAnisotropy:Int = -1;
 
-	@:noCompletion private var gl:WebGLRenderingContext;
+	@:noCompletion private var gl:WebGLRenderContext;
 	@:noCompletion private var __backBufferAntiAlias:Int;
 	@:noCompletion private var __backBufferTexture:RectangleTexture;
 	@:noCompletion private var __backBufferWantsBestResolution:Bool;
 	@:noCompletion private var __backBufferWantsBestResolutionOnBrowserZoom:Bool;
 	@:noCompletion private var __bitmapDataPool:BitmapDataPool;
 	@:noCompletion private var __cleared:Bool;
-	@:noCompletion private var __context:#if lime RenderContext #else Dynamic #end;
+	@:noCompletion private var __context:#if (lime || openfl_html5) RenderContext #else Dynamic #end;
 	@:noCompletion private var __contextState:Context3DState;
 	@:noCompletion private var __renderStage3DProgram:Program3D;
 	@:noCompletion private var __enableErrorChecking:Bool;
@@ -290,8 +297,8 @@ final class Context3D extends EventDispatcher
 		__contextState = contextState;
 		__stage3D = stage3D;
 
-		#if openfl_gl
-		__context = stage.window.context;
+		#if (lime && openfl_gl)
+		__context = stage.limeWindow.context;
 		gl = __context.webgl;
 
 		if (__contextState == null) __contextState = new Context3DState();
@@ -342,7 +349,7 @@ final class Context3D extends EventDispatcher
 		if (__glDepthStencil == -1)
 		{
 			#if openfl_html5
-			__glDepthStencil = gl.DEPTH_STENCIL;
+			__glDepthStencil = GL.DEPTH_STENCIL;
 			#elseif lime
 			if (__context.type == OPENGLES && Std.parseFloat(__context.version) >= 3)
 			{
@@ -397,7 +404,6 @@ final class Context3D extends EventDispatcher
 		__quadIndexBufferElements = Math.floor(0xFFFF / 4);
 		__quadIndexBufferCount = __quadIndexBufferElements * 6;
 
-		#if lime
 		var data = new UInt16Array(__quadIndexBufferCount);
 
 		var index:UInt = 0;
@@ -418,7 +424,6 @@ final class Context3D extends EventDispatcher
 
 		__quadIndexBuffer = createIndexBuffer(__quadIndexBufferCount);
 		__quadIndexBuffer.uploadFromTypedArray(data);
-		#end
 
 		__bitmapDataPool = new BitmapDataPool(30, this);
 		#end
@@ -1063,14 +1068,14 @@ final class Context3D extends EventDispatcher
 
 		if (__stage.context3D == this)
 		{
-			if (__stage.window != null)
+			if (__stage.limeWindow != null)
 			{
 				if (__stage3D != null)
 				{
 					destVector.setTo(Std.int(-__stage3D.x), Std.int(-__stage3D.y));
 				}
 
-				var image = __stage.window.readPixels();
+				var image = __stage.limeWindow.readPixels();
 				destination.image.copyPixels(image, sourceRect, destVector);
 			}
 		}
@@ -1438,7 +1443,12 @@ final class Context3D extends EventDispatcher
 			var isVertex = (programType == VERTEX);
 			var dest = isVertex ? __vertexConstants : __fragmentConstants;
 
+			#if (!lime && openfl_html5)
+			var bytes:haxe.io.Bytes = cast data;
+			var floatData = new Float32Array(bytes.getData(), 0, data.length);
+			#else
 			var floatData = Float32Array.fromBytes(data, 0, data.length);
+			#end
 			var outOffset = firstRegister * 4;
 			var inOffset = Std.int(byteArrayOffset / 4);
 
@@ -2247,6 +2257,7 @@ final class Context3D extends EventDispatcher
 
 	@:noCompletion private function __flushGLScissor():Void
 	{
+		#if (lime && openfl_gl)
 		if (!__state.scissorEnabled)
 		{
 			if (#if openfl_disable_context_cache true #else __contextState.scissorEnabled != __state.scissorEnabled #end)
@@ -2267,7 +2278,7 @@ final class Context3D extends EventDispatcher
 
 			if (__state.renderToTexture == null && __stage3D == null)
 			{
-				var contextHeight = Std.int(__stage.window.height * __stage.window.scale);
+				var contextHeight = Std.int(__stage.limeWindow.height * __stage.limeWindow.scale);
 				scissorY = contextHeight - Std.int(__state.scissorRectangle.height) - scissorY;
 			}
 
@@ -2280,6 +2291,7 @@ final class Context3D extends EventDispatcher
 				__contextState.scissorRectangle.setTo(scissorX, scissorY, scissorWidth, scissorHeight);
 			}
 		}
+		#end
 	}
 
 	@:noCompletion private function __flushGLStencil():Void
@@ -2401,6 +2413,7 @@ final class Context3D extends EventDispatcher
 
 	@:noCompletion private function __flushGLViewport():Void
 	{
+		#if (lime && openfl_gl)
 		// TODO: Cache
 
 		if (__state.renderToTexture == null)
@@ -2408,7 +2421,7 @@ final class Context3D extends EventDispatcher
 			if (__stage.context3D == this)
 			{
 				var x = __stage3D == null ? 0 : Std.int(__stage3D.x);
-				var y = Std.int((__stage.window.height * __stage.window.scale) - backBufferHeight - (__stage3D == null ? 0 : __stage3D.y));
+				var y = Std.int((__stage.limeWindow.height * __stage.limeWindow.scale) - backBufferHeight - (__stage3D == null ? 0 : __stage3D.y));
 				gl.viewport(x, y, backBufferWidth, backBufferHeight);
 			}
 			else
@@ -2442,6 +2455,7 @@ final class Context3D extends EventDispatcher
 
 			gl.viewport(0, 0, width, height);
 		}
+		#end
 	}
 
 	@:noCompletion private function __getGLBlend(blendFactor:Context3DBlendFactor):Int

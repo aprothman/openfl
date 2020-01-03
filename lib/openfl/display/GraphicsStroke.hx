@@ -16,7 +16,7 @@ package openfl.display;
  * `Graphics.lineBitmapStyle()` method, or the
  * `Graphics.lineGradientStyle()` method.
  */
-final extern class GraphicsStroke implements IGraphicsData implements IGraphicsStroke
+@:final extern class GraphicsStroke implements IGraphicsData implements IGraphicsStroke
 {
 	/**
 	 * Specifies the type of caps at the end of lines. Valid values are:
@@ -207,7 +207,7 @@ final extern class GraphicsStroke implements IGraphicsData implements IGraphicsS
 	 *                     `miterLimit` parameter to limit the length
 	 *                     of the miter.
 	 */
-	public function new(thickness:Float = Math.NaN, pixelHinting:Bool = false, ?scaleMode:LineScaleMode, ?caps:CapsStyle, ?joints:JointStyle,
+	public function new(thickness:Null<Float> = null, pixelHinting:Bool = false, ?scaleMode:LineScaleMode, ?caps:CapsStyle, ?joints:JointStyle,
 		miterLimit:Float = 3, fill:IGraphicsFill = null);
 }
 #else

@@ -23,7 +23,7 @@ import openfl.utils.ByteArray;
 #end
 @:access(openfl.display3D.Context3D)
 @:access(openfl.display.Stage)
-final class RectangleTexture extends TextureBase
+@:final class RectangleTexture extends TextureBase
 {
 	@:noCompletion private function new(context:Context3D, width:Int, height:Int, format:String, optimizeForRenderToTexture:Bool)
 	{
@@ -54,7 +54,7 @@ final class RectangleTexture extends TextureBase
 	**/
 	public function uploadFromBitmapData(source:BitmapData):Void
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		if (source == null) return;
 
 		var image = __getImage(source);

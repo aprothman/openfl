@@ -30,7 +30,7 @@ import openfl.utils.ByteArray;
 @:access(openfl.display3D.Context3D)
 @:access(openfl.display.Stage)
 @:access(openfl.events.Event)
-final class CubeTexture extends TextureBase
+@:final class CubeTexture extends TextureBase
 {
 	@:noCompletion private var __framebufferSurface:Int;
 	@:noCompletion private var __size:Int;
@@ -145,7 +145,7 @@ final class CubeTexture extends TextureBase
 	**/
 	public function uploadFromBitmapData(source:BitmapData, side:UInt, miplevel:UInt = 0, generateMipmap:Bool = false):Void
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		if (source == null) return;
 		var size = __size >> miplevel;
 		if (size == 0) return;
@@ -171,9 +171,9 @@ final class CubeTexture extends TextureBase
 			__uploadedSides |= 1 << side;
 			return;
 		}
-		#end
 
 		uploadFromTypedArray(image.data, side, miplevel);
+		#end
 		#end
 	}
 

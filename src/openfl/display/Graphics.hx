@@ -48,7 +48,7 @@ import openfl._internal.renderer.cairo.CairoGraphics;
 @:access(openfl.display.Shader)
 @:access(openfl.geom.Matrix)
 @:access(openfl.geom.Rectangle)
-final class Graphics
+@:final class Graphics
 {
 	@:noCompletion private static var maxTextureHeight:Null<Int> = null;
 	@:noCompletion private static var maxTextureWidth:Null<Int> = null;
@@ -86,7 +86,7 @@ final class Graphics
 	@:noCompletion private var __worldTransform:Matrix;
 	#if openfl_html5
 	@:noCompletion private var __canvas:CanvasElement;
-	@:noCompletion private var __context:#if lime CanvasRenderingContext2D #else Dynamic #end;
+	@:noCompletion private var __context:CanvasRenderingContext2D;
 	#else
 	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __cairo:#if lime Cairo #else Dynamic #end;
 	#end
@@ -383,13 +383,11 @@ final class Graphics
 	{
 		if (shader != null)
 		{
-			#if lime
 			var shaderBuffer = __shaderBufferPool.get();
 			__usedShaderBuffers.add(shaderBuffer);
 			shaderBuffer.update(cast shader);
 
 			__commands.beginShaderFill(shaderBuffer);
-			#end
 		}
 	}
 
@@ -400,12 +398,10 @@ final class Graphics
 	**/
 	public function clear():Void
 	{
-		#if lime
 		for (shaderBuffer in __usedShaderBuffers)
 		{
 			__shaderBufferPool.release(shaderBuffer);
 		}
-		#end
 
 		__usedShaderBuffers.clear();
 		__commands.clear();

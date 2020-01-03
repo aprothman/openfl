@@ -27,7 +27,7 @@ import openfl.utils.ByteArray;
 @:access(openfl.display3D.Context3D)
 @:access(openfl.display.Stage)
 @:access(openfl.events.Event)
-final class Texture extends TextureBase
+@:final class Texture extends TextureBase
 {
 	@:noCompletion private static var __lowMemoryMode:Bool = false;
 
@@ -136,7 +136,7 @@ final class Texture extends TextureBase
 	**/
 	public function uploadFromBitmapData(source:BitmapData, miplevel:UInt = 0, generateMipmap:Bool = false):Void
 	{
-		#if lime
+		#if (lime || openfl_html5)
 		/* TODO
 			if (LowMemoryMode) {
 				// shrink bitmap data

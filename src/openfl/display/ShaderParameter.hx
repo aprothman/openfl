@@ -1,6 +1,7 @@
 package openfl.display;
 
 #if !flash
+import openfl._internal.backend.gl.GL;
 import openfl._internal.backend.utils.Float32Array;
 import openfl.display3D.Context3D;
 
@@ -93,7 +94,7 @@ import openfl.display3D.Context3D;
 #if (!js && !display)
 @:generic
 #end
-final class ShaderParameter<T> /*implements Dynamic*/
+@:final class ShaderParameter<T> /*implements Dynamic*/
 {
 	/**
 		The zero-based index of the parameter.
@@ -558,9 +559,9 @@ final class ShaderParameter<T> /*implements Dynamic*/
 			}
 			else
 			{
-				var type = gl.FLOAT;
-				if (__isBool) type = gl.INT; // gl.BOOL;
-				else if (__isInt) type = gl.INT;
+				var type = GL.FLOAT;
+				if (__isBool) type = GL.INT; // gl.BOOL;
+				else if (__isInt) type = GL.INT;
 
 				for (i in 0...__arrayLength)
 				{

@@ -1,8 +1,9 @@
 package openfl.display;
 
+#if lime
 import lime.graphics.RenderContextAttributes;
-import openfl._internal.backend.lime.Application as LimeApplication;
-import openfl._internal.backend.lime.WindowAttributes;
+import lime.app.Application as LimeApplication;
+import lime.ui.WindowAttributes;
 import openfl._internal.Lib;
 
 /**
@@ -17,23 +18,15 @@ import openfl._internal.Lib;
 @:access(openfl.display.LoaderInfo)
 @:access(openfl.display.Window)
 @SuppressWarnings("checkstyle:FieldDocComment")
-class Application #if lime extends LimeApplication #end
+class Application extends LimeApplication
 {
-	#if !lime
-	public static var current:Application;
-
-	public var window:Window;
-	#end
-
 	public function new()
 	{
-		#if lime
 		super();
-		#end
 
-		if (Lib.application == null)
+		if (Lib.limeApplication == null)
 		{
-			Lib.application = this;
+			Lib.limeApplication = this;
 		}
 
 		#if (!flash && !macro)
@@ -43,7 +36,6 @@ class Application #if lime extends LimeApplication #end
 		#end
 	}
 
-	#if lime
 	public override function createWindow(attributes:WindowAttributes):Window
 	{
 		var window = new Window(this);
@@ -106,5 +98,5 @@ class Application #if lime extends LimeApplication #end
 
 		onCreateWindow.dispatch(window);
 	}
-	#end
 }
+#end
