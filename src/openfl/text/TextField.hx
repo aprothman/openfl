@@ -3031,7 +3031,6 @@ class TextField extends InteractiveObject
 
 							dispatchEvent(new Event(Event.CHANGE, true));
 						}
-						setDirty = false;
 					}
 
 				case Keyboard.BACKSPACE:
