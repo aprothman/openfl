@@ -27,7 +27,7 @@ class Window extends LimeWindow
 	}
 
 	@SuppressWarnings("checkstyle:Dynamic")
-	@:noCompletion public override function create(attributes: WindowAttributes):Void
+	@:noCompletion public override function create(attributes:WindowAttributes):Void
 	{
 		super.create(attributes);
 
@@ -35,7 +35,7 @@ class Window extends LimeWindow
 	}
 
 	@SuppressWarnings("checkstyle:Dynamic")
-	@:noCompletion public override function createFrom(foreignHandle:Int, attributes: RenderContextAttributes #else Dynamic #end):Void
+	@:noCompletion public override function createFrom(foreignHandle:Int, attributes:RenderContextAttributes):Void
 	{
 		super.createFrom(foreignHandle, attributes);
 
