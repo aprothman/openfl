@@ -192,8 +192,13 @@ class ApplicationMain
 			ApplicationMain.getEntryPoint();
 			trace("ApplicationMain: getEntryPoint called");
 			stage.dispatchEvent(new openfl.events.Event(openfl.events.Event.RESIZE, false, false));
+<<<<<<< HEAD
 			trace("ApplicationMain: stage.dispatchEvent RESIZE called");
 			if (stage.limeWindow.fullscreen)
+=======
+
+			if (stage.window.fullscreen)
+>>>>>>> 859b946bd157107c8971b92ffc859c6541d94e1d
 			{
 				stage.dispatchEvent(new openfl.events.FullScreenEvent(openfl.events.FullScreenEvent.FULL_SCREEN, false, false, true, true));
 			}

@@ -4,19 +4,17 @@ package openfl.display3D;
 import openfl._internal.backend.gl.GLProgram;
 import openfl._internal.backend.gl.GLShader;
 import openfl._internal.backend.gl.GLUniformLocation;
-import openfl._internal.backend.gl.GL;
 import openfl._internal.formats.agal.AGALConverter;
 import openfl._internal.renderer.SamplerState;
-import openfl._internal.backend.utils.Float32Array;
+import openfl._internal.utils.Float32Array;
 import openfl._internal.utils.Log;
 import openfl.display.ShaderParameterType;
 import openfl.errors.IllegalOperationError;
 import openfl.utils.ByteArray;
 import openfl.Vector;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.BytePointer;
-#else
-import openfl._internal.backend.lime.BytePointer;
+#if lime
+import lime.graphics.opengl.GL;
+import lime.utils.BytePointer;
 #end
 
 /**
@@ -393,8 +391,8 @@ import openfl._internal.backend.lime.BytePointer;
 		// var samplerStates = new Vector<SamplerState> (Context3D.MAX_SAMPLERS);
 		var samplerStates = new Array<SamplerState>();
 
-		var glslVertex = AGALConverter.convertToGLSL(this, vertexProgram, null);
-		var glslFragment = AGALConverter.convertToGLSL(this, fragmentProgram, samplerStates);
+		var glslVertex = AGALConverter.convertToGLSL(vertexProgram, null);
+		var glslFragment = AGALConverter.convertToGLSL(fragmentProgram, samplerStates);
 
 		if (Log.level == LogLevel.VERBOSE)
 		{
@@ -483,7 +481,7 @@ import openfl._internal.backend.lime.BytePointer;
 	{
 		if (__format == GLSL) return;
 
-		#if openfl_gl
+		#if lime
 		var gl = __context.gl;
 
 		__agalUniforms.clear();
@@ -494,7 +492,7 @@ import openfl._internal.backend.lime.BytePointer;
 		__agalSamplerUsageMask = 0;
 
 		var numActive = 0;
-		numActive = gl.getProgramParameter(__glProgram, GL.ACTIVE_UNIFORMS);
+		numActive = gl.getProgramParameter(__glProgram, gl.ACTIVE_UNIFORMS);
 
 		var vertexUniforms = new List<Uniform>();
 		var fragmentUniforms = new List<Uniform>();
@@ -854,17 +852,16 @@ import openfl._internal.backend.lime.BytePointer;
 
 	@:noCompletion private function __uploadFromGLSL(vertexShaderSource:String, fragmentShaderSource:String):Void
 	{
-		#if openfl_gl
 		var gl = __context.gl;
 
 		__glVertexSource = vertexShaderSource;
 		__glFragmentSource = fragmentShaderSource;
 
-		__glVertexShader = gl.createShader(GL.VERTEX_SHADER);
+		__glVertexShader = gl.createShader(gl.VERTEX_SHADER);
 		gl.shaderSource(__glVertexShader, vertexShaderSource);
 		gl.compileShader(__glVertexShader);
 
-		if (gl.getShaderParameter(__glVertexShader, GL.COMPILE_STATUS) == 0)
+		if (gl.getShaderParameter(__glVertexShader, gl.COMPILE_STATUS) == 0)
 		{
 			var message = "Error compiling vertex shader";
 			message += "\n" + gl.getShaderInfoLog(__glVertexShader);
@@ -872,11 +869,11 @@ import openfl._internal.backend.lime.BytePointer;
 			Log.error(message);
 		}
 
-		__glFragmentShader = gl.createShader(GL.FRAGMENT_SHADER);
+		__glFragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 		gl.shaderSource(__glFragmentShader, fragmentShaderSource);
 		gl.compileShader(__glFragmentShader);
 
-		if (gl.getShaderParameter(__glFragmentShader, GL.COMPILE_STATUS) == 0)
+		if (gl.getShaderParameter(__glFragmentShader, gl.COMPILE_STATUS) == 0)
 		{
 			var message = "Error compiling fragment shader";
 			message += "\n" + gl.getShaderInfoLog(__glFragmentShader);
@@ -918,13 +915,12 @@ import openfl._internal.backend.lime.BytePointer;
 		gl.attachShader(__glProgram, __glFragmentShader);
 		gl.linkProgram(__glProgram);
 
-		if (gl.getProgramParameter(__glProgram, GL.LINK_STATUS) == 0)
+		if (gl.getProgramParameter(__glProgram, gl.LINK_STATUS) == 0)
 		{
 			var message = "Unable to initialize the shader program";
 			message += "\n" + gl.getProgramInfoLog(__glProgram);
 			Log.error(message);
 		}
-		#end
 	}
 }
 
@@ -945,7 +941,7 @@ import openfl._internal.backend.lime.BytePointer;
 	public var regCount:Int;
 	public var isDirty:Bool;
 	public var context:Context3D;
-	#if (lime || openfl_html5)
+	#if lime
 	public var regDataPointer:BytePointer;
 	#end
 
@@ -955,24 +951,24 @@ import openfl._internal.backend.lime.BytePointer;
 
 		isDirty = true;
 
-		#if (lime || openfl_html5)
+		#if lime
 		regDataPointer = new BytePointer();
 		#end
 	}
 
 	public function flush():Void
 	{
-		#if openfl_gl
-		#if openfl_html5
+		#if lime
+		#if (js && html5)
 		var gl = context.gl;
-		#elseif lime
+		#else
 		var gl = context.__context.gles2;
 		#end
 
 		var index:Int = regIndex * 4;
 		switch (type)
 		{
-			#if openfl_html5
+			#if (js && html5)
 			case GL.FLOAT_MAT2:
 				gl.uniformMatrix2fv(location, false, __getUniformRegisters(index, size * 2 * 2));
 			case GL.FLOAT_MAT3:
@@ -1007,7 +1003,7 @@ import openfl._internal.backend.lime.BytePointer;
 		#end
 	}
 
-	#if openfl_html5
+	#if (js && html5)
 	@:noCompletion private inline function __getUniformRegisters(index:Int, size:Int):Float32Array
 	{
 		return regData.subarray(index, index + size);

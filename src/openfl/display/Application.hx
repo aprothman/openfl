@@ -1,10 +1,11 @@
 package openfl.display;
 
+import openfl._internal.Lib;
 #if lime
 import lime.graphics.RenderContextAttributes;
 import lime.app.Application as LimeApplication;
 import lime.ui.WindowAttributes;
-import openfl._internal.Lib;
+#end
 
 /**
 	The Application class is a Lime Application instance that uses
@@ -18,15 +19,23 @@ import openfl._internal.Lib;
 @:access(openfl.display.LoaderInfo)
 @:access(openfl.display.Window)
 @SuppressWarnings("checkstyle:FieldDocComment")
-class Application extends LimeApplication
+class Application #if lime extends LimeApplication #end
 {
+	#if !lime
+	public static var current:Application;
+
+	public var window:Window;
+	#end
+
 	public function new()
 	{
+		#if lime
 		super();
+		#end
 
-		if (Lib.limeApplication == null)
+		if (Lib.application == null)
 		{
-			Lib.limeApplication = this;
+			Lib.application = this;
 		}
 
 		#if (!flash && !macro)
@@ -36,6 +45,7 @@ class Application extends LimeApplication
 		#end
 	}
 
+	#if lime
 	public override function createWindow(attributes:WindowAttributes):Window
 	{
 		var window = new Window(this);
@@ -98,5 +108,5 @@ class Application extends LimeApplication
 
 		onCreateWindow.dispatch(window);
 	}
+	#end
 }
-#end

@@ -1,21 +1,16 @@
 package openfl.display;
 
 #if !flash
-import openfl._internal.backend.cairo.CairoImageSurface;
-import openfl._internal.backend.cairo.CairoSurface;
-import openfl._internal.backend.cairo.Cairo;
 import openfl._internal.backend.gl.GLFramebuffer;
 import openfl._internal.backend.gl.GLRenderbuffer;
-import openfl._internal.backend.html5.CanvasElement;
-import openfl._internal.backend.math.ARGB;
-import openfl._internal.backend.math.Vector2;
-import openfl._internal.renderer.BitmapDataPool;
-import openfl._internal.renderer.DisplayObjectType;
-import openfl._internal.backend.utils.Float32Array;
+import openfl._internal.formats.swf.SWFLite;
+import openfl._internal.symbols.BitmapSymbol;
+import openfl._internal.utils.Float32Array;
 import openfl._internal.utils.PerlinNoise;
-import openfl._internal.backend.utils.UInt16Array;
-import openfl._internal.backend.utils.UInt8Array;
+import openfl._internal.utils.UInt16Array;
+import openfl._internal.utils.UInt8Array;
 import openfl.display3D.textures.TextureBase;
+import openfl.display3D.Context3DClearMask;
 import openfl.display3D.Context3D;
 import openfl.display3D.IndexBuffer3D;
 import openfl.display3D.VertexBuffer3D;
@@ -29,28 +24,29 @@ import openfl.utils.ByteArray;
 import openfl.utils.Endian;
 import openfl.utils.Future;
 import openfl.utils.Object;
+import openfl.Lib;
 import openfl.Vector;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.Image;
-import openfl._internal.backend.lime_standalone.ImageCanvasUtil;
-import openfl.display.BitmapDataChannel as ImageChannel;
-import openfl._internal.backend.lime_standalone.ImageBuffer;
-import openfl._internal.backend.lime_standalone.RenderContext;
-#else
-import openfl._internal.backend.lime.Image;
-import openfl._internal.backend.lime.ImageCanvasUtil;
-import openfl._internal.backend.lime.ImageChannel;
-import openfl._internal.backend.lime.ImageBuffer;
-import openfl._internal.backend.lime.RenderContext;
+#if lime
+import lime._internal.graphics.ImageCanvasUtil; // TODO
+import lime.app.Application;
+import lime.graphics.cairo.CairoFilter;
+import lime.graphics.cairo.CairoImageSurface;
+import lime.graphics.cairo.CairoPattern;
+import lime.graphics.cairo.CairoSurface;
+import lime.graphics.cairo.Cairo;
+import lime.graphics.Image;
+import lime.graphics.ImageChannel;
+import lime.graphics.ImageBuffer;
+import lime.graphics.RenderContext;
+import lime.math.ARGB;
+import lime.math.Vector2;
 #end
-#if openfl_gl
-import openfl._internal.renderer.context3D.batcher.BatchRenderer;
-import openfl._internal.renderer.context3D.Context3DRenderer;
+#if (js && html5)
+import js.html.CanvasElement;
 #end
-#if openfl_html5
-import openfl._internal.renderer.canvas.CanvasRenderer;
-#else
-import openfl._internal.renderer.cairo.CairoRenderer;
+#if gl_stats
+import openfl._internal.renderer.context3D.stats.Context3DStats;
+import openfl._internal.renderer.context3D.stats.DrawCallContext;
 #end
 
 /**
@@ -112,12 +108,9 @@ import openfl._internal.renderer.cairo.CairoRenderer;
 @:access(lime.graphics.Image)
 @:access(lime.graphics.ImageBuffer)
 @:access(lime.math.Rectangle)
-@:access(openfl._internal.backend.lime.cairo.CairoRenderer)
-@:access(openfl._internal.renderer.canvas.CanvasRenderer)
 @:access(openfl.display3D.textures.TextureBase)
 @:access(openfl.display3D.Context3D)
 @:access(openfl.display.DisplayObject)
-@:access(openfl.display.DisplayObjectRenderer)
 @:access(openfl.display.DisplayObjectShader)
 @:access(openfl.display.Graphics)
 @:access(openfl.display.Shader)
@@ -134,15 +127,10 @@ import openfl._internal.renderer.cairo.CairoRenderer;
 class BitmapData implements IBitmapDrawable
 {
 	@:noCompletion private static inline var VERTEX_BUFFER_STRIDE:Int = 14;
-	@:noCompletion private static var __hardwareRenderer:#if openfl_gl Context3DRenderer #else Dynamic #end;
-	@:noCompletion private static var __pool:BitmapDataPool = new BitmapDataPool();
-	@:noCompletion private static var __softwareRenderer:DisplayObjectRenderer;
 	@:noCompletion private static var __supportsBGRA:Null<Bool> = null;
 	@:noCompletion private static var __textureFormat:Int;
 	@:noCompletion private static var __textureInternalFormat:Int;
-	#if (!lime && openfl_html5)
-	@:noCompletion private static var __tempVector:Point = new Point();
-	#elseif lime
+	#if lime
 	@:noCompletion private static var __tempVector:Vector2 = new Vector2();
 	#end
 
@@ -157,7 +145,7 @@ class BitmapData implements IBitmapDrawable
 		In Flash Player, this property is always `null`.
 	**/
 	@SuppressWarnings("checkstyle:Dynamic")
-	public var image(default, null):#if (lime || openfl_html5) Image #else Dynamic #end;
+	public var image(default, null):#if lime Image #else Dynamic #end;
 
 	// #if !flash_doc_gen
 
@@ -203,9 +191,9 @@ class BitmapData implements IBitmapDrawable
 	// @:noCompletion private var __vertexBufferColorTransform:ColorTransform;
 	// @:noCompletion private var __vertexBufferAlpha:Float;
 	@:noCompletion private var __framebuffer:GLFramebuffer;
-	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __framebufferContext:#if (lime || openfl_html5) RenderContext #else Dynamic #end;
+	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __framebufferContext:#if lime RenderContext #else Dynamic #end;
 	@:noCompletion private var __indexBuffer:IndexBuffer3D;
-	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __indexBufferContext:#if (lime || openfl_html5) RenderContext #else Dynamic #end;
+	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __indexBufferContext:#if lime RenderContext #else Dynamic #end;
 	@:noCompletion private var __indexBufferData:UInt16Array;
 	@:noCompletion private var __indexBufferGrid:Rectangle;
 	@:noCompletion private var __isMask:Bool;
@@ -215,17 +203,17 @@ class BitmapData implements IBitmapDrawable
 	@:noCompletion private var __renderTransform:Matrix;
 	@:noCompletion private var __scrollRect:Rectangle;
 	@:noCompletion private var __stencilBuffer:GLRenderbuffer;
-	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __surface:#if (lime || openfl_html5) CairoSurface #else Dynamic #end;
+	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __surface:#if lime CairoSurface #else Dynamic #end;
+	@:noCompletion private var __symbol:BitmapSymbol;
 	@:noCompletion private var __texture:TextureBase;
-	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __textureContext:#if (lime || openfl_html5) RenderContext #else Dynamic #end;
+	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __textureContext:#if lime RenderContext #else Dynamic #end;
 	@:noCompletion private var __textureHeight:Int;
 	@:noCompletion private var __textureVersion:Int;
 	@:noCompletion private var __textureWidth:Int;
 	@:noCompletion private var __transform:Matrix;
-	@:noCompletion private var __type:DisplayObjectType;
 	@:noCompletion private var __uvRect:Rectangle;
 	@:noCompletion private var __vertexBuffer:VertexBuffer3D;
-	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __vertexBufferContext:#if (lime || openfl_html5) RenderContext #else Dynamic #end;
+	@SuppressWarnings("checkstyle:Dynamic") @:noCompletion private var __vertexBufferContext:#if lime RenderContext #else Dynamic #end;
 	@:noCompletion private var __vertexBufferData:Float32Array;
 	@:noCompletion private var __vertexBufferGrid:Rectangle;
 	@:noCompletion private var __vertexBufferHeight:Float;
@@ -255,7 +243,7 @@ class BitmapData implements IBitmapDrawable
 	{
 		this.transparent = transparent;
 
-		#if (neko || openfl_html5)
+		#if (neko || (js && html5))
 		width = width == null ? 0 : width;
 		height = height == null ? 0 : height;
 		#end
@@ -269,11 +257,6 @@ class BitmapData implements IBitmapDrawable
 
 		__textureWidth = width;
 		__textureHeight = height;
-
-		#if openfl_power_of_two
-		__textureWidth = __powerOfTwo(width);
-		__textureHeight = __powerOfTwo(height);
-		#end
 
 		if (width > 0 && height > 0)
 		{
@@ -291,7 +274,7 @@ class BitmapData implements IBitmapDrawable
 
 			fillColor = (fillColor << 8) | ((fillColor >> 24) & 0xFF);
 
-			#if (lime || openfl_html5)
+			#if lime
 			#if sys
 			var buffer = new ImageBuffer(new UInt8Array(width * height * 4), width, height);
 			buffer.format = BGRA32;
@@ -303,7 +286,7 @@ class BitmapData implements IBitmapDrawable
 			{
 				image.fillRect(image.rect, fillColor);
 			}
-			// #elseif openfl_html5
+			// #elseif (js && html5)
 			// var buffer = new ImageBuffer (null, width, height);
 			// var canvas:CanvasElement = cast Browser.document.createElement ("canvas");
 			// buffer.__srcCanvas = canvas;
@@ -414,7 +397,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function clone():BitmapData
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var bitmapData;
 
 		if (!__isValid)
@@ -462,8 +445,8 @@ class BitmapData implements IBitmapDrawable
 	{
 		if (!readable) return;
 
-		#if (lime || openfl_html5)
-		image.colorTransform(#if (!lime && openfl_html5) rect #else rect.__toLimeRectangle() #end, colorTransform.__toLimeColorMatrix());
+		#if lime
+		image.colorTransform(rect.__toLimeRectangle(), colorTransform.__toLimeColorMatrix());
 		#end
 	}
 
@@ -480,7 +463,7 @@ class BitmapData implements IBitmapDrawable
 	@SuppressWarnings("checkstyle:Dynamic")
 	public function compare(otherBitmapData:BitmapData):Dynamic
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (otherBitmapData == this)
 		{
 			return 0;
@@ -648,7 +631,7 @@ class BitmapData implements IBitmapDrawable
 	{
 		if (!readable) return;
 
-		#if (lime || openfl_html5)
+		#if lime
 		var sourceChannel = switch (sourceChannel)
 		{
 			case 1: ImageChannel.RED;
@@ -667,8 +650,7 @@ class BitmapData implements IBitmapDrawable
 			default: return;
 		}
 
-		image.copyChannel(sourceBitmapData.image, #if (!lime && openfl_html5) sourceRect #else sourceRect.__toLimeRectangle() #end,
-			#if (!lime && openfl_html5) destPoint #else destPoint.__toLimeVector2() #end, sourceChannel, destChannel);
+		image.copyChannel(sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(), sourceChannel, destChannel);
 		#end
 	}
 
@@ -716,65 +698,15 @@ class BitmapData implements IBitmapDrawable
 	{
 		if (!readable || sourceBitmapData == null) return;
 
-		#if (lime && openfl_html5)
-		if (alphaBitmapData != null
-			&& alphaBitmapData.transparent
-			&& (alphaBitmapData != sourceBitmapData || (alphaPoint != null && (alphaPoint.x != 0 || alphaPoint.y != 0))))
-		{
-			var point = Point.__pool.get();
-			var rect = Rectangle.__pool.get();
-			rect.copyFrom(sourceBitmapData.rect);
-			rect.__contract(sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height);
-
-			var copy = BitmapData.__pool.get(Std.int(rect.width), Std.int(rect.height));
-
-			ImageCanvasUtil.convertToCanvas(copy.image);
-			ImageCanvasUtil.convertToCanvas(sourceBitmapData.image);
-			ImageCanvasUtil.convertToCanvas(alphaBitmapData.image);
-
-			if (alphaPoint != null)
-			{
-				rect.x += alphaPoint.x;
-				rect.y += alphaPoint.y;
-			}
-
-			copy.image.buffer.__srcContext.globalCompositeOperation = "source-over";
-			copy.image.buffer.__srcContext.drawImage(alphaBitmapData.image.buffer.src, Std.int(rect.x + sourceBitmapData.image.offsetX),
-				Std.int(rect.y + sourceBitmapData.image.offsetY), Std.int(rect.width), Std.int(rect.height), Std.int(point.x + image.offsetX),
-				Std.int(point.y + image.offsetY), Std.int(rect.width), Std.int(rect.height));
-
-			if (alphaPoint != null)
-			{
-				rect.x -= alphaPoint.x;
-				rect.y -= alphaPoint.y;
-			}
-
-			copy.image.buffer.__srcContext.globalCompositeOperation = "source-in";
-			copy.image.buffer.__srcContext.drawImage(sourceBitmapData.image.buffer.src, Std.int(rect.x + sourceBitmapData.image.offsetX),
-				Std.int(rect.y + sourceBitmapData.image.offsetY), Std.int(rect.width), Std.int(rect.height), Std.int(point.x + image.offsetX),
-				Std.int(point.y + image.offsetY), Std.int(rect.width), Std.int(rect.height));
-
-			// TODO: Render directly for mergeAlpha=false?
-			image.copyPixels(copy.image, #if (!lime && openfl_html5) copy.rect #else copy.rect.__toLimeRectangle() #end,
-				#if (!lime && openfl_html5) destPoint #else destPoint.__toLimeVector2() #end, null, null, mergeAlpha);
-
-			BitmapData.__pool.release(copy);
-			Rectangle.__pool.release(rect);
-			Point.__pool.release(point);
-			return;
-		}
-		#end
-
-		#if (lime || openfl_html5)
+		#if lime
 		if (alphaPoint != null)
 		{
 			__tempVector.x = alphaPoint.x;
 			__tempVector.y = alphaPoint.y;
 		}
 
-		image.copyPixels(sourceBitmapData.image, #if (!lime && openfl_html5) sourceRect #else sourceRect.__toLimeRectangle() #end,
-			#if (!lime && openfl_html5) destPoint #else destPoint.__toLimeVector2() #end, alphaBitmapData != null ? alphaBitmapData.image : null,
-			alphaPoint != null ? __tempVector : null, mergeAlpha);
+		image.copyPixels(sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(),
+			alphaBitmapData != null ? alphaBitmapData.image : null, alphaPoint != null ? __tempVector : null, mergeAlpha);
 		#end
 	}
 
@@ -947,29 +879,58 @@ class BitmapData implements IBitmapDrawable
 			transform.concat(matrix);
 		}
 
+		var clipMatrix = null;
+
+		if (clipRect != null)
+		{
+			clipMatrix = Matrix.__pool.get();
+			clipMatrix.copyFrom(transform);
+			clipMatrix.invert();
+		}
+
 		var _colorTransform = new ColorTransform();
 		_colorTransform.__copyFrom(source.__worldColorTransform);
 		_colorTransform.__invert();
 
-		if (!readable && __hardwareRenderer != null && getTexture(__hardwareRenderer.context3D) != null)
+		if (!readable && Lib.current.stage.context3D != null)
 		{
+			if (__textureContext == null)
+			{
+				// TODO: Some way to select current GL context for renderer?
+				__textureContext = Application.current.window.context;
+			}
+
 			if (colorTransform != null)
 			{
 				_colorTransform.__combine(colorTransform);
 			}
 
-			__hardwareRenderer.__allowSmoothing = smoothing;
-			__hardwareRenderer.__overrideBlendMode = blendMode;
+			var renderer = new OpenGLRenderer(Lib.current.stage.context3D, this);
+			renderer.__allowSmoothing = smoothing;
+			renderer.__overrideBlendMode = blendMode;
 
-			__hardwareRenderer.__worldTransform = transform;
-			__hardwareRenderer.__worldAlpha = 1 / source.__worldAlpha;
-			__hardwareRenderer.__worldColorTransform = _colorTransform;
+			renderer.__worldTransform = transform;
+			renderer.__worldAlpha = 1 / source.__worldAlpha;
+			renderer.__worldColorTransform = _colorTransform;
 
-			__hardwareRenderer.__drawBitmapData(this, source, clipRect);
+			renderer.__resize(width, height);
+
+			if (clipRect != null)
+			{
+				renderer.__pushMaskRect(clipRect, clipMatrix);
+			}
+
+			__drawGL(source, renderer);
+
+			if (clipRect != null)
+			{
+				renderer.__popMaskRect();
+				Matrix.__pool.release(clipMatrix);
+			}
 		}
 		else
 		{
-			#if (lime && (openfl_html5 || openfl_cairo))
+			#if ((js && html5) || lime_cairo)
 			if (colorTransform != null)
 			{
 				var bounds = Rectangle.__pool.get();
@@ -999,15 +960,11 @@ class BitmapData implements IBitmapDrawable
 				Matrix.__pool.release(boundsMatrix);
 			}
 
-			#if openfl_html5
-			if (__softwareRenderer == null) __softwareRenderer = new CanvasRenderer(null);
+			#if (js && html5)
 			ImageCanvasUtil.convertToCanvas(image);
-			var renderer:CanvasRenderer = cast __softwareRenderer;
-			renderer.context = image.buffer.__srcContext;
-			#elseif openfl_cairo
-			if (__softwareRenderer == null) __softwareRenderer = new CairoRenderer(null);
-			var renderer:CairoRenderer = cast __softwareRenderer;
-			renderer.cairo = new Cairo(getSurface());
+			var renderer = new CanvasRenderer(image.buffer.__srcContext);
+			#else
+			var renderer = new CairoRenderer(new Cairo(getSurface()));
 			#end
 
 			renderer.__allowSmoothing = smoothing;
@@ -1017,7 +974,22 @@ class BitmapData implements IBitmapDrawable
 			renderer.__worldAlpha = 1 / source.__worldAlpha;
 			renderer.__worldColorTransform = _colorTransform;
 
-			renderer.__drawBitmapData(this, source, clipRect);
+			if (clipRect != null)
+			{
+				renderer.__pushMaskRect(clipRect, clipMatrix);
+			}
+
+			#if (js && html5)
+			__drawCanvas(source, renderer);
+			#else
+			__drawCairo(source, renderer);
+			#end
+
+			if (clipRect != null)
+			{
+				renderer.__popMaskRect();
+				Matrix.__pool.release(clipMatrix);
+			}
 			#end
 		}
 
@@ -1143,7 +1115,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function encode(rect:Rectangle, compressor:Object, byteArray:ByteArray = null):ByteArray
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (!readable || rect == null) return byteArray = null;
 		if (byteArray == null) byteArray = new ByteArray();
 
@@ -1189,23 +1161,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function fillRect(rect:Rectangle, color:Int):Void
 	{
-		#if (lime || openfl_html5)
-		if (rect == null) return;
-
-		if (transparent && (color & 0xFF000000) == 0)
-		{
-			color = 0;
-		}
-
-		if (!readable && __texture != null && __hardwareRenderer != null)
-		{
-			__hardwareRenderer.__fillRect(this, rect, color);
-		}
-		else if (readable)
-		{
-			image.fillRect(#if (!lime && openfl_html5) rect #else rect.__toLimeRectangle() #end, color, ARGB32);
-		}
-		#end
+		__fillRect(rect, color, true);
 	}
 
 	/**
@@ -1221,17 +1177,17 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function floodFill(x:Int, y:Int, color:Int):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (!readable) return;
 		image.floodFill(x, y, color, ARGB32);
 		#end
 	}
 
-	#if (!openfl_doc_gen || (!openfl_html5 && !flash_doc_gen))
+	#if (!openfl_doc_gen || (!js && !html5 && !flash_doc_gen))
 	/**
 		Creates a new BitmapData instance from Base64-encoded data synchronously. This means
 		that the BitmapData will be returned immediately (if supported).
-
+		
 		HTML5 and Flash do not support creating BitmapData synchronously, so these targets
 		always return `null`. Other targets will return `null` if decoding was unsuccessful.
 
@@ -1241,7 +1197,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function fromBase64(base64:String, type:String):BitmapData
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return null;
 		#else
 		var bitmapData = new BitmapData(0, 0, true, 0);
@@ -1251,7 +1207,7 @@ class BitmapData implements IBitmapDrawable
 	}
 	#end
 
-	#if (!openfl_doc_gen || (!openfl_html5 && !flash_doc_gen))
+	#if (!openfl_doc_gen || (!js && !html5 && !flash_doc_gen))
 	/**
 		Creates a new BitmapData from bytes (a haxe.io.Bytes or openfl.utils.ByteArray)
 		synchronously. This means that the BitmapData will be returned immediately (if
@@ -1269,7 +1225,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function fromBytes(bytes:ByteArray, rawAlpha:ByteArray = null):BitmapData
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return null;
 		#else
 		var bitmapData = new BitmapData(0, 0, true, 0);
@@ -1279,7 +1235,7 @@ class BitmapData implements IBitmapDrawable
 	}
 	#end
 
-	#if openfl_html5
+	#if (js && html5)
 	/**
 		Creates a new BitmapData from an HTML5 canvas element immediately.
 
@@ -1294,18 +1250,14 @@ class BitmapData implements IBitmapDrawable
 	{
 		if (canvas == null) return null;
 
-		#if (lime || openfl_html5)
 		var bitmapData = new BitmapData(0, 0, transparent, 0);
 		bitmapData.__fromImage(Image.fromCanvas(canvas));
 		bitmapData.image.transparent = transparent;
 		return bitmapData;
-		#else
-		return null;
-		#end
 	}
 	#end
 
-	#if (!openfl_doc_gen || (!openfl_html5 && !flash_doc_gen))
+	#if (!openfl_doc_gen || (!js && !html5 && !flash_doc_gen))
 	/**
 		Creates a new BitmapData from a file path synchronously. This means that the
 		BitmapData will be returned immediately (if supported).
@@ -1321,7 +1273,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function fromFile(path:String):BitmapData
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return null;
 		#else
 		var bitmapData = new BitmapData(0, 0, true, 0);
@@ -1331,7 +1283,7 @@ class BitmapData implements IBitmapDrawable
 	}
 	#end
 
-	#if (lime || openfl_html5)
+	#if lime
 	/**
 		Creates a new BitmapData using an existing Lime Image instance.
 
@@ -1426,7 +1378,7 @@ class BitmapData implements IBitmapDrawable
 			// TODO: Use shared buffer on context
 			// TODO: Support for UVs other than scale-9 grid?
 
-			#if (lime || openfl_html5)
+			#if lime
 			__indexBufferContext = context.__context;
 			__indexBuffer = null;
 
@@ -1441,17 +1393,13 @@ class BitmapData implements IBitmapDrawable
 				{
 					__indexBufferData = new UInt16Array(54);
 
-					//  0 ——— 1    4 ——— 5    8 ——— 9
-					//  |  /  |    |  /  |    |  /  |
-					//  2 ——— 3    6 ——— 7   10 ——— 11
-					//
-					// 12 ——— 13  16 ——— 18  20 ——— 21
-					//  |  /  |    |  /  |    |  /  |
-					// 14 ——— 15  17 ——— 19  22 ——— 23
-					//
-					// 24 ——— 25  28 ——— 29  32 ——— 33
-					//  |  /  |    |  /  |    |  /  |
-					// 26 ——— 27  30 ——— 31  34 ——— 35
+					// 3 ——— 2 ——— 5 ——— 7
+					// |  /  |  /  |  /  |
+					// 1 ——— 0 ——— 4 ——— 6
+					// |  /  |  /  |  /  |
+					// 9 ——— 8 —— 10 —— 11
+					// |  /  |  /  |  /  |
+					// 13 — 12 —— 14 —— 15
 
 					// top left
 					__indexBufferData[0] = 0;
@@ -1463,67 +1411,67 @@ class BitmapData implements IBitmapDrawable
 
 					// top center
 					__indexBufferData[6] = 4;
-					__indexBufferData[7] = 5;
-					__indexBufferData[8] = 6;
-					__indexBufferData[9] = 6;
-					__indexBufferData[10] = 5;
-					__indexBufferData[11] = 7;
+					__indexBufferData[7] = 0;
+					__indexBufferData[8] = 5;
+					__indexBufferData[9] = 5;
+					__indexBufferData[10] = 0;
+					__indexBufferData[11] = 2;
 
 					// top right
-					__indexBufferData[12] = 8;
-					__indexBufferData[13] = 9;
-					__indexBufferData[14] = 10;
-					__indexBufferData[15] = 10;
-					__indexBufferData[16] = 9;
-					__indexBufferData[17] = 11;
+					__indexBufferData[12] = 6;
+					__indexBufferData[13] = 4;
+					__indexBufferData[14] = 7;
+					__indexBufferData[15] = 7;
+					__indexBufferData[16] = 4;
+					__indexBufferData[17] = 5;
 
 					// middle left
-					__indexBufferData[18] = 12;
-					__indexBufferData[19] = 13;
-					__indexBufferData[20] = 14;
-					__indexBufferData[21] = 14;
-					__indexBufferData[22] = 13;
-					__indexBufferData[23] = 15;
+					__indexBufferData[18] = 8;
+					__indexBufferData[19] = 9;
+					__indexBufferData[20] = 0;
+					__indexBufferData[21] = 0;
+					__indexBufferData[22] = 9;
+					__indexBufferData[23] = 1;
 
 					// middle center
-					__indexBufferData[24] = 16;
-					__indexBufferData[25] = 18;
-					__indexBufferData[26] = 17;
-					__indexBufferData[27] = 17;
-					__indexBufferData[28] = 18;
-					__indexBufferData[29] = 19;
+					__indexBufferData[24] = 10;
+					__indexBufferData[25] = 8;
+					__indexBufferData[26] = 4;
+					__indexBufferData[27] = 4;
+					__indexBufferData[28] = 8;
+					__indexBufferData[29] = 0;
 
 					// middle right
-					__indexBufferData[30] = 20;
-					__indexBufferData[31] = 21;
-					__indexBufferData[32] = 22;
-					__indexBufferData[33] = 22;
-					__indexBufferData[34] = 21;
-					__indexBufferData[35] = 23;
+					__indexBufferData[30] = 11;
+					__indexBufferData[31] = 10;
+					__indexBufferData[32] = 6;
+					__indexBufferData[33] = 6;
+					__indexBufferData[34] = 10;
+					__indexBufferData[35] = 4;
 
 					// bottom left
-					__indexBufferData[36] = 24;
-					__indexBufferData[37] = 25;
-					__indexBufferData[38] = 26;
-					__indexBufferData[39] = 26;
-					__indexBufferData[40] = 25;
-					__indexBufferData[41] = 27;
+					__indexBufferData[36] = 12;
+					__indexBufferData[37] = 13;
+					__indexBufferData[38] = 8;
+					__indexBufferData[39] = 8;
+					__indexBufferData[40] = 13;
+					__indexBufferData[41] = 9;
 
 					// bottom center
-					__indexBufferData[42] = 28;
-					__indexBufferData[43] = 29;
-					__indexBufferData[44] = 30;
-					__indexBufferData[45] = 30;
-					__indexBufferData[46] = 29;
-					__indexBufferData[47] = 31;
+					__indexBufferData[42] = 14;
+					__indexBufferData[43] = 12;
+					__indexBufferData[44] = 10;
+					__indexBufferData[45] = 10;
+					__indexBufferData[46] = 12;
+					__indexBufferData[47] = 8;
 
-					// bottom right
-					__indexBufferData[48] = 32;
-					__indexBufferData[49] = 33;
-					__indexBufferData[50] = 34;
-					__indexBufferData[51] = 34;
-					__indexBufferData[52] = 33;
-					__indexBufferData[53] = 35;
+					// bottom center
+					__indexBufferData[48] = 15;
+					__indexBufferData[49] = 14;
+					__indexBufferData[50] = 11;
+					__indexBufferData[51] = 11;
+					__indexBufferData[52] = 14;
+					__indexBufferData[53] = 10;
 
 					__indexBuffer = context.createIndexBuffer(54);
 				}
@@ -1624,149 +1572,6 @@ class BitmapData implements IBitmapDrawable
 		return __indexBuffer;
 	}
 
-	#if (openfl_gl && !disable_batcher)
-	@:dox(hide) public function pushQuadsToBatcher(batcher:BatchRenderer, transform:Matrix, alpha:Float, object:DisplayObject):Void
-	{
-		var blendMode = object.__worldBlendMode;
-		var colorTransform = object.__worldColorTransform;
-		var scale9Grid = object.__worldScale9Grid;
-
-		#if openfl_power_of_two
-		var uvWidth = width / __textureWidth;
-		var uvHeight = height / __textureHeight;
-		#else
-		var uvWidth = 1;
-		var uvHeight = 1;
-		#end
-
-		if (object != null && scale9Grid != null)
-		{
-			var vertexBufferWidth = object.width;
-			var vertexBufferHeight = object.height;
-			var vertexBufferScaleX = object.scaleX;
-			var vertexBufferScaleY = object.scaleY;
-
-			var centerX = scale9Grid.width;
-			var centerY = scale9Grid.height;
-			if (centerX != 0 && centerY != 0)
-			{
-				var left = scale9Grid.x;
-				var top = scale9Grid.y;
-				var right = vertexBufferWidth - centerX - left;
-				var bottom = vertexBufferHeight - centerY - top;
-
-				var uvLeft = left / vertexBufferWidth;
-				var uvTop = top / vertexBufferHeight;
-				var uvCenterX = scale9Grid.width / vertexBufferWidth;
-				var uvCenterY = scale9Grid.height / vertexBufferHeight;
-				var uvRight = right / width;
-				var uvBottom = bottom / height;
-				var uvOffsetU = 0.5 / vertexBufferWidth;
-				var uvOffsetV = 0.5 / vertexBufferHeight;
-
-				var renderedLeft = left / vertexBufferScaleX;
-				var renderedTop = top / vertexBufferScaleY;
-				var renderedRight = right / vertexBufferScaleX;
-				var renderedBottom = bottom / vertexBufferScaleY;
-				var renderedCenterX = (width - renderedLeft - renderedRight);
-				var renderedCenterY = (height - renderedTop - renderedBottom);
-
-				//  a         b          c         d
-				// p  0 ——— 1    4 ——— 5    8 ——— 9
-				//    |  /  |    |  /  |    |  /  |
-				//    2 ——— 3    6 ——— 7   10 ——— 11
-				// q
-				//   12 ——— 13  16 ——— 18  20 ——— 21
-				//    |  /  |    |  /  |    |  /  |
-				//   14 ——— 15  17 ——— 19  22 ——— 23
-				// r
-				//   24 ——— 25  28 ——— 29  32 ——— 33
-				//    |  /  |    |  /  |    |  /  |
-				//   26 ——— 27  30 ——— 31  34 ——— 35
-				// s
-
-				var a = 0;
-				var b = renderedLeft;
-				var c = renderedLeft + renderedCenterX;
-				var bc = renderedCenterX;
-				var d = width;
-				var cd = d - c;
-
-				var p = 0;
-				var q = renderedTop;
-				var r = renderedTop + renderedCenterY;
-				var qr = renderedCenterY;
-				var s = height;
-				var rs = s - r;
-
-				batcher.setVs(0, (uvHeight * uvTop) - uvOffsetV);
-				batcher.setVertices(transform, a, p, b, q);
-				batcher.setUs(0, (uvWidth * uvLeft) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, b, p, bc, q);
-				batcher.setUs((uvWidth * uvLeft) + uvOffsetU, (uvWidth * (uvLeft + uvCenterX)) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, c, p, cd, q);
-				batcher.setUs((uvWidth * (uvLeft + uvCenterX)) + uvOffsetU, uvWidth);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVs((uvHeight * uvTop) + uvOffsetV, (uvHeight * (uvTop + uvCenterY)) - uvOffsetV);
-				batcher.setVertices(transform, a, q, b, qr);
-				batcher.setUs(0, (uvWidth * uvLeft) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, b, q, bc, qr);
-				batcher.setUs((uvWidth * uvLeft) + uvOffsetU, (uvWidth * (uvLeft + uvCenterX)) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, c, q, cd, qr);
-				batcher.setUs((uvWidth * (uvLeft + uvCenterX)) + uvOffsetU, uvWidth);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVs((uvHeight * (uvTop + uvCenterY)) + uvOffsetV, uvHeight);
-				batcher.setVertices(transform, a, r, b, rs);
-				batcher.setUs(0, (uvWidth * uvLeft) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, b, r, bc, rs);
-				batcher.setUs((uvWidth * uvLeft) + uvOffsetU, (uvWidth * (uvLeft + uvCenterX)) - uvOffsetU);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-
-				batcher.setVertices(transform, c, r, cd, rs);
-				batcher.setUs((uvWidth * (uvLeft + uvCenterX)) + uvOffsetU, uvWidth);
-				batcher.pushQuad(this, blendMode, alpha, colorTransform);
-			}
-			else if (centerX == 0 && centerY != 0)
-			{
-				// TODO
-				// 3 ——— 2
-				// |  /  |
-				// 1 ——— 0
-				// |  /  |
-				// 5 ——— 4
-				// |  /  |
-				// 7 ——— 6
-			}
-			else if (centerY == 0 && centerX != 0)
-			{
-				// TODO
-				// 3 ——— 2 ——— 5 ——— 7
-				// |  /  |  /  |  /  |
-				// 1 ——— 0 ——— 4 ——— 6
-			}
-		}
-		else
-		{
-			batcher.setVertices(transform, 0, 0, width, height);
-			batcher.setUs(0, uvWidth);
-			batcher.setVs(0, uvHeight);
-			batcher.pushQuad(this, blendMode, alpha, colorTransform);
-		}
-	}
-	#end
-
 	/**
 		**BETA**
 
@@ -1792,10 +1597,33 @@ class BitmapData implements IBitmapDrawable
 					|| __vertexBufferScaleX != targetObject.scaleX
 					|| __vertexBufferScaleY != targetObject.scaleY)))
 		{
-			__uvRect = new Rectangle(0, 0, __textureWidth, __textureHeight);
+			#if openfl_power_of_two
+			var newWidth = 1;
+			var newHeight = 1;
 
-			var uvWidth = width / __textureWidth;
-			var uvHeight = height / __textureHeight;
+			while (newWidth < width)
+			{
+				newWidth <<= 1;
+			}
+
+			while (newHeight < height)
+			{
+				newHeight <<= 1;
+			}
+
+			__uvRect = new Rectangle(0, 0, newWidth, newHeight);
+
+			var uvWidth = width / newWidth;
+			var uvHeight = height / newHeight;
+
+			__textureWidth = newWidth;
+			__textureHeight = newHeight;
+			#else
+			__uvRect = new Rectangle(0, 0, width, height);
+
+			var uvWidth = 1;
+			var uvHeight = 1;
+			#end
 
 			// __vertexBufferData = new Float32Array ([
 			//
@@ -1810,7 +1638,7 @@ class BitmapData implements IBitmapDrawable
 			// [ colorTransform.redMultiplier, 0, 0, 0, 0, colorTransform.greenMultiplier, 0, 0, 0, 0, colorTransform.blueMultiplier, 0, 0, 0, 0, colorTransform.alphaMultiplier ];
 			// [ colorTransform.redOffset / 255, colorTransform.greenOffset / 255, colorTransform.blueOffset / 255, colorTransform.alphaOffset / 255 ]
 
-			#if (lime || openfl_html5)
+			#if lime
 			__vertexBufferContext = context.__context;
 			__vertexBuffer = null;
 
@@ -1836,63 +1664,106 @@ class BitmapData implements IBitmapDrawable
 				var centerY = scale9Grid.height;
 				if (centerX != 0 && centerY != 0)
 				{
-					__vertexBufferData = new Float32Array(VERTEX_BUFFER_STRIDE * 36);
+					__vertexBufferData = new Float32Array(VERTEX_BUFFER_STRIDE * 16);
 
 					var left = scale9Grid.x;
 					var top = scale9Grid.y;
-					var right = __vertexBufferWidth - centerX - left;
-					var bottom = __vertexBufferHeight - centerY - top;
+					var right = width - centerX - left;
+					var bottom = height - centerY - top;
 
-					var uvLeft = left / __vertexBufferWidth;
-					var uvTop = top / __vertexBufferHeight;
-					var uvCenterX = scale9Grid.width / __vertexBufferWidth;
-					var uvCenterY = scale9Grid.height / __vertexBufferHeight;
+					var uvLeft = left / width;
+					var uvTop = top / height;
+					var uvCenterX = centerX / width;
+					var uvCenterY = centerY / height;
 					var uvRight = right / width;
 					var uvBottom = bottom / height;
-					var uvOffsetU = 0.5 / __vertexBufferWidth;
-					var uvOffsetV = 0.5 / __vertexBufferHeight;
 
 					var renderedLeft = left / targetObject.scaleX;
 					var renderedTop = top / targetObject.scaleY;
 					var renderedRight = right / targetObject.scaleX;
 					var renderedBottom = bottom / targetObject.scaleY;
-					var renderedCenterX = (width - renderedLeft - renderedRight);
-					var renderedCenterY = (height - renderedTop - renderedBottom);
+					var renderedCenterX = (targetObject.width / targetObject.scaleX) - renderedLeft - renderedRight;
+					var renderedCenterY = (targetObject.height / targetObject.scaleY) - renderedTop - renderedBottom;
 
-					//  0 ——— 1    4 ——— 5    8 ——— 9
-					//  |  /  |    |  /  |    |  /  |
-					//  2 ——— 3    6 ——— 7   10 ——— 11
-					//
-					// 12 ——— 13  16 ——— 18  20 ——— 21
-					//  |  /  |    |  /  |    |  /  |
-					// 14 ——— 15  17 ——— 19  22 ——— 23
-					//
-					// 24 ——— 25  28 ——— 29  32 ——— 33
-					//  |  /  |    |  /  |    |  /  |
-					// 26 ——— 27  30 ——— 31  34 ——— 35
+					// 3 ——— 2 ——— 5 ——— 7
+					// |  /  |  /  |  /  |
+					// 1 ——— 0 ——— 4 ——— 6
+					// |  /  |  /  |  /  |
+					// 9 ——— 8 —— 10 —— 11
+					// |  /  |  /  |  /  |
+					// 13 — 12 —— 14 —— 15
 
-					__setVertex(0, 0, 0, 0, 0);
-					__setVertices([3, 6, 13, 16], renderedLeft, renderedTop, uvWidth * uvLeft, uvHeight * uvTop);
-					__setVertices([2, 12], 0, renderedTop, 0, uvHeight * uvTop);
-					__setVertices([1, 4], renderedLeft, 0, uvWidth * uvLeft, 0);
-					__setVertices([7, 10, 18, 20], renderedLeft + renderedCenterX, renderedTop, uvWidth * (uvLeft + uvCenterX), uvHeight * uvTop);
-					__setVertices([5, 8], renderedLeft + renderedCenterX, 0, uvWidth * (uvLeft + uvCenterX), 0);
-					__setVertices([11, 21], width, renderedTop, uvWidth, uvHeight * uvTop);
-					__setVertex(9, width, 0, uvWidth, 0);
-					__setVertices([15, 17, 25, 28], renderedLeft, renderedTop + renderedCenterY, uvWidth * uvLeft, uvHeight * (uvTop + uvCenterY));
-					__setVertices([14, 24], 0, renderedTop + renderedCenterY, 0, uvHeight * (uvTop + uvCenterY));
-					__setVertices([19, 22, 29, 32], renderedLeft + renderedCenterX, renderedTop + renderedCenterY, uvWidth * (uvLeft + uvCenterX),
-						uvHeight * (uvTop + uvCenterY));
-					__setVertices([23, 33], width, renderedTop + renderedCenterY, uvWidth, uvHeight * (uvTop + uvCenterY));
-					__setVertices([27, 30], renderedLeft, height, uvWidth * uvLeft, uvHeight);
-					__setVertex(26, 0, height, 0, uvHeight);
-					__setVertices([31, 34], renderedLeft + renderedCenterX, height, uvWidth * (uvLeft + uvCenterX), uvHeight);
-					__setVertex(35, width, height, uvWidth, uvHeight);
+					// top left <0-1-2> <2-1-3>
+					__vertexBufferData[0] = renderedLeft;
+					__vertexBufferData[1] = renderedTop;
+					__vertexBufferData[3] = uvWidth * uvLeft;
+					__vertexBufferData[4] = uvHeight * uvTop;
 
-					__setUOffsets([1, 3, 5, 7, 13, 15, 18, 19, 25, 27, 29, 31], -uvOffsetU);
-					__setUOffsets([4, 6, 8, 10, 16, 17, 20, 22, 28, 30, 32, 34], uvOffsetU);
-					__setVOffsets([2, 3, 6, 7, 10, 11, 14, 15, 17, 19, 22, 23], -uvOffsetV);
-					__setVOffsets([12, 13, 16, 18, 20, 21, 24, 25, 28, 29, 32, 33], uvOffsetV);
+					__vertexBufferData[VERTEX_BUFFER_STRIDE + 1] = renderedTop;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE + 4] = uvHeight * uvTop;
+
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 2] = renderedLeft;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 2 + 3] = uvWidth * uvLeft;
+
+					// top center <4-0-5> <5-0-2>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 4] = renderedLeft + renderedCenterX;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 4 + 1] = renderedTop;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 4 + 3] = uvWidth * (uvLeft + uvCenterX);
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 4 + 4] = uvHeight * uvTop;
+
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 5] = renderedLeft + renderedCenterX;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 5 + 3] = uvWidth * (uvLeft + uvCenterX);
+
+					// top right <6-4-7> <7-4-5>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 6] = width;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 6 + 1] = renderedTop;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 6 + 3] = uvWidth;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 6 + 4] = uvHeight * uvTop;
+
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 7] = width;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 7 + 3] = uvWidth;
+
+					// middle left <8-9-0> <0-9-1>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 8] = renderedLeft;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 8 + 1] = renderedTop + renderedCenterY;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 8 + 3] = uvWidth * uvLeft;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 8 + 4] = uvHeight * (uvTop + uvCenterY);
+
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 9 + 1] = renderedTop + renderedCenterY;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 9 + 4] = uvHeight * (uvTop + uvCenterY);
+
+					// middle center <10-8-4> <4-8-0>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 10] = renderedLeft + renderedCenterX;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 10 + 1] = renderedTop + renderedCenterY;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 10 + 3] = uvWidth * (uvLeft + uvCenterX);
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 10 + 4] = uvHeight * (uvTop + uvCenterY);
+
+					// middle right <11-10-6> <6-10-4>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 11] = width;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 11 + 1] = renderedTop + renderedCenterY;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 11 + 3] = uvWidth;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 11 + 4] = uvHeight * (uvTop + uvCenterY);
+
+					// bottom left <12-13-8> <8-13-9>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 12] = renderedLeft;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 12 + 1] = height;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 12 + 3] = uvWidth * uvLeft;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 12 + 4] = uvHeight;
+
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 13 + 1] = height;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 13 + 4] = uvHeight;
+
+					// bottom center <14-12-10> <10-12-8>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 14] = renderedLeft + renderedCenterX;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 14 + 1] = height;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 14 + 3] = uvWidth * (uvLeft + uvCenterX);
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 14 + 4] = uvHeight;
+
+					// bottom right <15-14-11> <11-14-10>
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 15] = width;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 15 + 1] = height;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 15 + 3] = uvWidth;
+					__vertexBufferData[VERTEX_BUFFER_STRIDE * 15 + 4] = uvHeight;
 
 					__vertexBuffer = context.createVertexBuffer(16, VERTEX_BUFFER_STRIDE);
 				}
@@ -2163,7 +2034,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function getColorBoundsRect(mask:Int, color:Int, findColor:Bool = true):Rectangle
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (!readable) return new Rectangle(0, 0, width, height);
 
 		if (!transparent || ((mask >> 24) & 0xFF) > 0)
@@ -2205,7 +2076,7 @@ class BitmapData implements IBitmapDrawable
 	public function getPixel(x:Int, y:Int):Int
 	{
 		if (!readable) return 0;
-		#if (lime || openfl_html5)
+		#if lime
 		return image.getPixel(x, y, ARGB32);
 		#else
 		return 0;
@@ -2237,7 +2108,7 @@ class BitmapData implements IBitmapDrawable
 	public function getPixel32(x:Int, y:Int):Int
 	{
 		if (!readable) return 0;
-		#if (lime || openfl_html5)
+		#if lime
 		return image.getPixel32(x, y, ARGB32);
 		#else
 		return 0;
@@ -2255,10 +2126,10 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public function getPixels(rect:Rectangle):ByteArray
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (!readable) return null;
 		if (rect == null) rect = this.rect;
-		var byteArray = ByteArray.fromBytes(image.getPixels(#if (!lime && openfl_html5) rect #else rect.__toLimeRectangle() #end, ARGB32));
+		var byteArray = ByteArray.fromBytes(image.getPixels(rect.__toLimeRectangle(), ARGB32));
 		// TODO: System endian order
 		byteArray.endian = Endian.BIG_ENDIAN;
 		return byteArray;
@@ -2304,17 +2175,10 @@ class BitmapData implements IBitmapDrawable
 	{
 		if (!__isValid) return null;
 
-		if (!readable && image == null && (__texture == null || __textureContext != context.__context))
-		{
-			__textureContext = null;
-			__texture = null;
-			return null;
-		}
-
 		if (__texture == null || __textureContext != context.__context)
 		{
 			__textureContext = context.__context;
-			__texture = context.createRectangleTexture(__textureWidth, __textureHeight, BGRA, false);
+			__texture = context.createRectangleTexture(width, height, BGRA, false);
 
 			// context.__bindGLTexture2D (__texture);
 			// gl.texParameteri (gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -2324,8 +2188,8 @@ class BitmapData implements IBitmapDrawable
 			__textureVersion = -1;
 		}
 
-		#if (lime || openfl_html5)
-		#if openfl_html5
+		#if lime
+		#if (js && html5)
 		ImageCanvasUtil.sync(image, false);
 		#end
 
@@ -2338,7 +2202,7 @@ class BitmapData implements IBitmapDrawable
 
 			var textureImage = image;
 
-			#if openfl_html5
+			#if (js && html5)
 			if (#if openfl_power_of_two true || #end (!TextureBase.__supportsBGRA && textureImage.format != RGBA32))
 			{
 				textureImage = textureImage.clone();
@@ -2591,7 +2455,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function loadFromBase64(base64:String, type:String):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromBase64(base64, type).then(function(image)
 		{
 			return Future.withValue(BitmapData.fromImage(image));
@@ -2616,7 +2480,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function loadFromBytes(bytes:ByteArray, rawAlpha:ByteArray = null):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromBytes(bytes).then(function(image)
 		{
 			var bitmapData = BitmapData.fromImage(image);
@@ -2644,7 +2508,7 @@ class BitmapData implements IBitmapDrawable
 	**/
 	public static function loadFromFile(path:String):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromFile(path).then(function(image)
 		{
 			return Future.withValue(BitmapData.fromImage(image));
@@ -2704,10 +2568,10 @@ class BitmapData implements IBitmapDrawable
 	public function merge(sourceBitmapData:BitmapData, sourceRect:Rectangle, destPoint:Point, redMultiplier:UInt, greenMultiplier:UInt, blueMultiplier:UInt,
 			alphaMultiplier:UInt):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (!readable || sourceBitmapData == null || !sourceBitmapData.readable || sourceRect == null || destPoint == null) return;
-		image.merge(sourceBitmapData.image, #if (!lime && openfl_html5) sourceRect #else sourceRect.__toLimeRectangle() #end,
-			#if (!lime && openfl_html5) destPoint #else destPoint.__toLimeVector2() #end, redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier);
+		image.merge(sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(), redMultiplier, greenMultiplier, blueMultiplier,
+			alphaMultiplier);
 		#end
 	}
 
@@ -2976,7 +2840,7 @@ class BitmapData implements IBitmapDrawable
 	public function setPixel(x:Int, y:Int, color:Int):Void
 	{
 		if (!readable) return;
-		#if (lime || openfl_html5)
+		#if lime
 		image.setPixel(x, y, color, ARGB32);
 		#end
 	}
@@ -3015,7 +2879,7 @@ class BitmapData implements IBitmapDrawable
 	public function setPixel32(x:Int, y:Int, color:Int):Void
 	{
 		if (!readable) return;
-		#if (lime || openfl_html5)
+		#if lime
 		image.setPixel32(x, y, color, ARGB32);
 		#end
 	}
@@ -3046,8 +2910,8 @@ class BitmapData implements IBitmapDrawable
 		var length = (rect.width * rect.height * 4);
 		if (byteArray.bytesAvailable < length) throw new Error("End of file was encountered.", 2030);
 
-		#if (lime || openfl_html5)
-		image.setPixels(#if (!lime && openfl_html5) rect #else rect.__toLimeRectangle() #end, byteArray, ARGB32, byteArray.endian);
+		#if lime
+		image.setPixels(rect.__toLimeRectangle(), byteArray, ARGB32, byteArray.endian);
 		#end
 	}
 
@@ -3136,9 +3000,9 @@ class BitmapData implements IBitmapDrawable
 			return 0;
 		}
 
-		#if (lime || openfl_html5)
-		return image.threshold(sourceBitmapData.image, #if (!lime && openfl_html5) sourceRect #else sourceRect.__toLimeRectangle() #end,
-			#if (!lime && openfl_html5) destPoint #else destPoint.__toLimeVector2() #end, operation, threshold, color, mask, copySource, ARGB32);
+		#if lime
+		return image.threshold(sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(), operation, threshold, color, mask,
+			copySource, ARGB32);
 		#else
 		return 0;
 		#end
@@ -3160,8 +3024,7 @@ class BitmapData implements IBitmapDrawable
 
 	@:noCompletion private function __applyAlpha(alpha:ByteArray):Void
 	{
-		#if (lime || openfl_html5)
-		#if openfl_html5
+		#if (js && html5)
 		ImageCanvasUtil.convertToCanvas(image);
 		ImageCanvasUtil.createImageData(image);
 		#end
@@ -3174,12 +3037,130 @@ class BitmapData implements IBitmapDrawable
 		}
 
 		image.version++;
+	}
+
+	@:noCompletion private function __drawCairo(source:IBitmapDrawable, renderer:CairoRenderer):Void
+	{
+		#if lime_cairo
+		var cairo = renderer.cairo;
+
+		if (source == this)
+		{
+			source = clone();
+		}
+
+		if (!renderer.__allowSmoothing) cairo.antialias = NONE;
+
+		renderer.__render(source);
+
+		if (!renderer.__allowSmoothing) cairo.antialias = GOOD;
+
+		cairo.target.flush();
+
+		image.dirty = true;
+		image.version++;
+		#end
+	}
+
+	@:noCompletion private function __drawCanvas(source:IBitmapDrawable, renderer:CanvasRenderer):Void
+	{
+		var buffer = image.buffer;
+
+		if (!renderer.__allowSmoothing) renderer.applySmoothing(buffer.__srcContext, false);
+
+		renderer.__render(source);
+
+		if (!renderer.__allowSmoothing) renderer.applySmoothing(buffer.__srcContext, true);
+
+		buffer.__srcContext.setTransform(1, 0, 0, 1, 0, 0);
+		buffer.__srcImageData = null;
+		buffer.data = null;
+
+		image.dirty = true;
+		image.version++;
+	}
+
+	@:noCompletion private function __drawGL(source:IBitmapDrawable, renderer:OpenGLRenderer):Void
+	{
+		var context = renderer.__context3D;
+
+		var cacheRTT = context.__state.renderToTexture;
+		var cacheRTTDepthStencil = context.__state.renderToTextureDepthStencil;
+		var cacheRTTAntiAlias = context.__state.renderToTextureAntiAlias;
+		var cacheRTTSurfaceSelector = context.__state.renderToTextureSurfaceSelector;
+
+		context.setRenderToTexture(getTexture(context), true);
+
+		renderer.__render(source);
+
+		if (cacheRTT != null)
+		{
+			context.setRenderToTexture(cacheRTT, cacheRTTDepthStencil, cacheRTTAntiAlias, cacheRTTSurfaceSelector);
+		}
+		else
+		{
+			context.setRenderToBackBuffer();
+		}
+	}
+
+	@:noCompletion private function __fillRect(rect:Rectangle, color:Int, allowFramebuffer:Bool):Void
+	{
+		#if lime
+		if (rect == null) return;
+
+		if (transparent && (color & 0xFF000000) == 0)
+		{
+			color = 0;
+		}
+
+		if (allowFramebuffer
+			&& __texture != null
+			&& __texture.__glFramebuffer != null
+			&& Lib.current.stage.__renderer.__type == OPENGL)
+		{
+			var renderer:OpenGLRenderer = cast Lib.current.stage.__renderer;
+			var context = renderer.__context3D;
+			var color:ARGB = (color : ARGB);
+			var useScissor = !this.rect.equals(rect);
+
+			var cacheRTT = context.__state.renderToTexture;
+			var cacheRTTDepthStencil = context.__state.renderToTextureDepthStencil;
+			var cacheRTTAntiAlias = context.__state.renderToTextureAntiAlias;
+			var cacheRTTSurfaceSelector = context.__state.renderToTextureSurfaceSelector;
+
+			context.setRenderToTexture(__texture);
+
+			if (useScissor)
+			{
+				context.setScissorRectangle(rect);
+			}
+
+			context.clear(color.r / 0xFF, color.g / 0xFF, color.b / 0xFF, transparent ? color.a / 0xFF : 1, 0, 0, Context3DClearMask.COLOR);
+
+			if (useScissor)
+			{
+				context.setScissorRectangle(null);
+			}
+
+			if (cacheRTT != null)
+			{
+				context.setRenderToTexture(cacheRTT, cacheRTTDepthStencil, cacheRTTAntiAlias, cacheRTTSurfaceSelector);
+			}
+			else
+			{
+				context.setRenderToBackBuffer();
+			}
+		}
+		else if (readable)
+		{
+			image.fillRect(rect.__toLimeRectangle(), color, ARGB32);
+		}
 		#end
 	}
 
 	@:noCompletion private inline function __fromBase64(base64:String, type:String):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var image = Image.fromBase64(base64, type);
 		__fromImage(image);
 		#end
@@ -3187,7 +3168,7 @@ class BitmapData implements IBitmapDrawable
 
 	@:noCompletion private inline function __fromBytes(bytes:ByteArray, rawAlpha:ByteArray = null):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var image = Image.fromBytes(bytes);
 		__fromImage(image);
 
@@ -3200,16 +3181,16 @@ class BitmapData implements IBitmapDrawable
 
 	@:noCompletion private function __fromFile(path:String):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var image = Image.fromFile(path);
 		__fromImage(image);
 		#end
 	}
 
 	@SuppressWarnings("checkstyle:Dynamic")
-	@:noCompletion private function __fromImage(image:#if (lime || openfl_html5) Image #else Dynamic #end):Void
+	@:noCompletion private function __fromImage(image:#if lime Image #else Dynamic #end):Void
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		if (image != null && image.buffer != null)
 		{
 			this.image = image;
@@ -3221,11 +3202,6 @@ class BitmapData implements IBitmapDrawable
 			__textureWidth = width;
 			__textureHeight = height;
 
-			#if openfl_power_of_two
-			__textureWidth = __powerOfTwo(width);
-			__textureHeight = __powerOfTwo(height);
-			#end
-
 			#if sys
 			image.format = BGRA32;
 			image.premultiplied = true;
@@ -3234,6 +3210,61 @@ class BitmapData implements IBitmapDrawable
 			readable = true;
 			__isValid = true;
 		}
+		#end
+	}
+
+	@:noCompletion private function __fromSymbol(swf:SWFLite, symbol:BitmapSymbol):Void
+	{
+		__symbol = symbol;
+
+		// TODO: Cache alpha image?
+
+		#if lime
+		#if (js && html5)
+		Image.loadFromFile(symbol.path).onComplete(function(image)
+		{
+			if (symbol.alpha != null)
+			{
+				Image.loadFromFile(symbol.alpha).onComplete(function(alpha)
+				{
+					if (image != null && alpha != null)
+					{
+						image.copyChannel(alpha, alpha.rect, new Vector2(), ImageChannel.RED, ImageChannel.ALPHA);
+						image.buffer.premultiplied = true;
+
+						#if !sys
+						image.premultiplied = false;
+						#end
+					}
+
+					__fromImage(image);
+				});
+			}
+			else
+			{
+				__fromImage(image);
+			}
+		});
+		#else
+		var image = Image.fromFile(symbol.path);
+
+		if (symbol.alpha != null)
+		{
+			var alpha = Image.fromFile(symbol.alpha);
+
+			if (image != null && alpha != null)
+			{
+				image.copyChannel(alpha, alpha.rect, new Vector2(), ImageChannel.RED, ImageChannel.ALPHA);
+				image.buffer.premultiplied = true;
+
+				#if !sys
+				image.premultiplied = false;
+				#end
+			}
+		}
+
+		__fromImage(image);
+		#end
 		#end
 	}
 
@@ -3274,7 +3305,7 @@ class BitmapData implements IBitmapDrawable
 	// }
 	@:noCompletion private inline function __loadFromBase64(base64:String, type:String):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromBase64(base64, type).then(function(image)
 		{
 			__fromImage(image);
@@ -3287,7 +3318,7 @@ class BitmapData implements IBitmapDrawable
 
 	@:noCompletion private inline function __loadFromBytes(bytes:ByteArray, rawAlpha:ByteArray = null):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromBytes(bytes).then(function(image)
 		{
 			__fromImage(image);
@@ -3306,7 +3337,7 @@ class BitmapData implements IBitmapDrawable
 
 	@:noCompletion private function __loadFromFile(path:String):Future<BitmapData>
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		return Image.loadFromFile(path).then(function(image)
 		{
 			__fromImage(image);
@@ -3315,6 +3346,115 @@ class BitmapData implements IBitmapDrawable
 		#else
 		return cast Future.withValue(this);
 		#end
+	}
+
+	@:noCompletion private function __renderCairo(renderer:CairoRenderer):Void
+	{
+		#if lime_cairo
+		if (!readable) return;
+
+		var cairo = renderer.cairo;
+
+		renderer.applyMatrix(__renderTransform, cairo);
+
+		var surface = getSurface();
+
+		if (surface != null)
+		{
+			var pattern = CairoPattern.createForSurface(surface);
+
+			if (!renderer.__allowSmoothing || cairo.antialias == NONE)
+			{
+				pattern.filter = CairoFilter.NEAREST;
+			}
+			else
+			{
+				pattern.filter = CairoFilter.GOOD;
+			}
+
+			cairo.source = pattern;
+			cairo.paint();
+		}
+		#end
+	}
+
+	@:noCompletion private function __renderCairoMask(renderer:CairoRenderer):Void {}
+
+	@:noCompletion private function __renderCanvas(renderer:CanvasRenderer):Void
+	{
+		#if (js && html5)
+		if (!readable) return;
+
+		if (image.type == DATA)
+		{
+			ImageCanvasUtil.convertToCanvas(image);
+		}
+
+		var context = renderer.context;
+		context.globalAlpha = 1;
+
+		renderer.setTransform(__renderTransform, context);
+
+		context.drawImage(image.src, 0, 0, image.width, image.height);
+		#end
+	}
+
+	@:noCompletion private function __renderCanvasMask(renderer:CanvasRenderer):Void {}
+
+	@:noCompletion private function __renderDOM(renderer:DOMRenderer):Void {}
+
+	@:noCompletion private function __renderGL(renderer:OpenGLRenderer):Void
+	{
+		var context = renderer.__context3D;
+		var gl = context.gl;
+
+		renderer.__setBlendMode(NORMAL);
+
+		var shader = renderer.__defaultDisplayShader;
+		renderer.setShader(shader);
+		renderer.applyBitmapData(this, renderer.__upscaled);
+		renderer.applyMatrix(renderer.__getMatrix(__worldTransform, AUTO));
+		renderer.applyAlpha(__worldAlpha);
+		renderer.applyColorTransform(__worldColorTransform);
+		renderer.updateShader();
+
+		// alpha == 1, __worldColorTransform
+
+		var vertexBuffer = getVertexBuffer(context);
+		if (shader.__position != null) context.setVertexBufferAt(shader.__position.index, vertexBuffer, 0, FLOAT_3);
+		if (shader.__textureCoord != null) context.setVertexBufferAt(shader.__textureCoord.index, vertexBuffer, 3, FLOAT_2);
+		var indexBuffer = getIndexBuffer(context);
+		context.drawTriangles(indexBuffer);
+
+		#if gl_stats
+		Context3DStats.incrementDrawCall(DrawCallContext.STAGE);
+		#end
+
+		renderer.__clearShader();
+	}
+
+	@:noCompletion private function __renderGLMask(renderer:OpenGLRenderer):Void
+	{
+		var context = renderer.__context3D;
+		var gl = context.gl;
+
+		var shader = renderer.__maskShader;
+		renderer.setShader(shader);
+		renderer.applyBitmapData(this, renderer.__upscaled);
+		renderer.applyMatrix(renderer.__getMatrix(__worldTransform, AUTO));
+		renderer.updateShader();
+
+		var vertexBuffer = getVertexBuffer(context);
+		if (shader.__position != null) context.setVertexBufferAt(shader.__position.index, vertexBuffer, 0, FLOAT_3);
+		if (shader.__textureCoord != null) context.setVertexBufferAt(shader.__textureCoord.index, vertexBuffer, 3, FLOAT_2);
+		var indexBuffer = getIndexBuffer(context);
+		context.drawTriangles(indexBuffer);
+
+		#if gl_stats
+		Context3DStats.incrementDrawCall(DrawCallContext.STAGE);
+		#end
+
+		renderer.__clearShader();
 	}
 
 	@:noCompletion private function __resize(width:Int, height:Int):Void
@@ -3326,11 +3466,6 @@ class BitmapData implements IBitmapDrawable
 
 		__textureWidth = width;
 		__textureHeight = height;
-
-		#if openfl_power_of_two
-		__textureWidth = __powerOfTwo(width);
-		__textureHeight = __powerOfTwo(height);
-		#end
 	}
 
 	@:noCompletion private function __setUVRect(context:Context3D, x:Float, y:Float, width:Float, height:Float):Void
@@ -3366,60 +3501,30 @@ class BitmapData implements IBitmapDrawable
 		}
 	}
 
-	@:noCompletion private function __setVertex(index:Int, x:Float, y:Float, u:Float, v:Float):Void
-	{
-		var i = index * VERTEX_BUFFER_STRIDE;
-		__vertexBufferData[i + 0] = x;
-		__vertexBufferData[i + 1] = y;
-		__vertexBufferData[i + 3] = u;
-		__vertexBufferData[i + 4] = v;
-	}
-
-	@:noCompletion private function __setVertices(indices:Array<Int>, x:Float, y:Float, u:Float, v:Float):Void
-	{
-		for (index in indices)
-		{
-			__setVertex(index, x, y, u, v);
-		}
-	}
-
-	@:noCompletion private function __setUOffsets(indices:Array<Int>, offset:Float):Void
-	{
-		for (index in indices)
-		{
-			__vertexBufferData[index * VERTEX_BUFFER_STRIDE + 3] += offset;
-		}
-	}
-
-	@:noCompletion private function __setVOffsets(indices:Array<Int>, offset:Float):Void
-	{
-		for (index in indices)
-		{
-			__vertexBufferData[index * VERTEX_BUFFER_STRIDE + 4] += offset;
-		}
-	}
-
 	@:noCompletion private function __sync():Void
 	{
-		#if (lime && openfl_html5)
+		#if (js && html5)
 		ImageCanvasUtil.sync(image, false);
 		#end
 	}
 
 	@:noCompletion private function __update(transformOnly:Bool, updateChildren:Bool):Void
 	{
-		// __worldTransform.identity();
-		// __renderTransform.copyFrom(__worldTransform);
+		__updateTransforms();
 	}
 
-	@:noCompletion private inline function __powerOfTwo(value:Int):Int
+	@:noCompletion private function __updateTransforms(overrideTransform:Matrix = null):Void
 	{
-		var newValue = 1;
-		while (newValue < value)
+		if (overrideTransform == null)
 		{
-			newValue <<= 1;
+			__worldTransform.identity();
 		}
-		return newValue;
+		else
+		{
+			__worldTransform.copyFrom(overrideTransform);
+		}
+
+		__renderTransform.copyFrom(__worldTransform);
 	}
 }
 #else

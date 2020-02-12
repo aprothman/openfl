@@ -1,17 +1,20 @@
 package openfl._internal.text;
 
 import haxe.io.Bytes;
-import openfl._internal.backend.harfbuzz.HBBuffer;
-import openfl._internal.backend.harfbuzz.HBBufferClusterLevel;
-import openfl._internal.backend.harfbuzz.HBDirection;
-import openfl._internal.backend.harfbuzz.HBFTFont;
-import openfl._internal.backend.harfbuzz.HBLanguage;
-import openfl._internal.backend.harfbuzz.HBScript;
-import openfl._internal.backend.harfbuzz.HB;
-import openfl._internal.backend.lime.Font;
-import openfl._internal.backend.lime.Glyph;
-import openfl._internal.backend.math.Vector2;
+#if lime
+import lime.math.Vector2;
+import lime.text.harfbuzz.HBBuffer;
+import lime.text.harfbuzz.HBBufferClusterLevel;
+import lime.text.harfbuzz.HBDirection;
+import lime.text.harfbuzz.HBFTFont;
+import lime.text.harfbuzz.HBLanguage;
+import lime.text.harfbuzz.HBScript;
+import lime.text.harfbuzz.HB;
+import lime.text.Font;
+import lime.text.Glyph;
+#else
 import openfl.text.Font;
+#end
 
 #if !openfl_debug
 @:fileXml('tags="haxe,release"')

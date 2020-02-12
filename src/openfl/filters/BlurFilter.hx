@@ -7,10 +7,9 @@ import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.ImageDataUtil;
-#else
-import openfl._internal.backend.lime.ImageDataUtil;
+#if lime
+import lime._internal.graphics.ImageDataUtil; // TODO
+
 #end
 
 /**
@@ -124,10 +123,8 @@ import openfl._internal.backend.lime.ImageDataUtil;
 		untyped Object.defineProperties(BlurFilter.prototype, {
 			"blurX": {get: untyped __js__("function () { return this.get_blurX (); }"), set: untyped __js__("function (v) { return this.set_blurX (v); }")},
 			"blurY": {get: untyped __js__("function () { return this.get_blurY (); }"), set: untyped __js__("function (v) { return this.set_blurY (v); }")},
-			"quality": {
-				get: untyped __js__("function () { return this.get_quality (); }"),
-				set: untyped __js__("function (v) { return this.set_quality (v); }")
-			},
+			"quality": {get: untyped __js__("function () { return this.get_quality (); }"),
+				set: untyped __js__("function (v) { return this.set_quality (v); }")},
 		});
 	}
 	#end
@@ -178,7 +175,7 @@ import openfl._internal.backend.lime.ImageDataUtil;
 	@:noCompletion private override function __applyFilter(bitmapData:BitmapData, sourceBitmapData:BitmapData, sourceRect:Rectangle,
 			destPoint:Point):BitmapData
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var time = Timer.stamp();
 		var finalImage = ImageDataUtil.gaussianBlur(bitmapData.image, sourceBitmapData.image, sourceRect.__toLimeRectangle(), destPoint.__toLimeVector2(),
 			__blurX, __blurY, __quality);
@@ -189,10 +186,10 @@ import openfl._internal.backend.lime.ImageDataUtil;
 		return sourceBitmapData;
 	}
 
-	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int, sourceBitmapData:BitmapData):Shader
+	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int):Shader
 	{
 		#if !macro
-		if (pass < __horizontalPasses)
+		if (pass <= __horizontalPasses)
 		{
 			var scale = Math.pow(0.5, pass >> 1);
 			__blurShader.uRadius.value[0] = blurX * scale;
@@ -301,27 +298,27 @@ private class BlurShader extends BitmapFilterShader
 			gl_Position = openfl_Matrix * openfl_Position;
 
 			vec2 r = uRadius / uTextureSize;
-			vBlurCoords[0] = openfl_TextureCoord - r;
+			vBlurCoords[0] = openfl_TextureCoord - r * 1.0;
 			vBlurCoords[1] = openfl_TextureCoord - r * 0.75;
 			vBlurCoords[2] = openfl_TextureCoord - r * 0.5;
 			vBlurCoords[3] = openfl_TextureCoord;
 			vBlurCoords[4] = openfl_TextureCoord + r * 0.5;
 			vBlurCoords[5] = openfl_TextureCoord + r * 0.75;
-			vBlurCoords[6] = openfl_TextureCoord + r;
+			vBlurCoords[6] = openfl_TextureCoord + r * 1.0;
 
 		}")
 	public function new()
 	{
 		super();
 
-		#if (!macro && openfl_gl)
+		#if !macro
 		uRadius.value = [0, 0];
 		#end
 	}
 
 	@:noCompletion private override function __update():Void
 	{
-		#if (!macro && openfl_gl)
+		#if !macro
 		uTextureSize.value = [__texture.input.width, __texture.input.height];
 		#end
 

@@ -1,8 +1,10 @@
 package openfl._internal.renderer.canvas;
 
-#if openfl_html5
-import openfl._internal.backend.math.ARGB;
+import openfl.display.CanvasRenderer;
 import openfl.display.DisplayObject;
+#if lime
+import lime.math.ARGB;
+#end
 
 @:access(openfl.display.DisplayObject)
 @:access(openfl.geom.Matrix)
@@ -11,7 +13,7 @@ class CanvasDisplayObject
 {
 	public static inline function render(displayObject:DisplayObject, renderer:CanvasRenderer):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (displayObject.opaqueBackground == null && displayObject.__graphics == null) return;
 		if (!displayObject.__renderable) return;
 
@@ -44,4 +46,3 @@ class CanvasDisplayObject
 		#end
 	}
 }
-#end

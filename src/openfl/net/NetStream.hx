@@ -2,12 +2,14 @@ package openfl.net;
 
 #if !flash
 import haxe.Timer;
-import openfl._internal.backend.html5.Browser;
-import openfl._internal.backend.html5.VideoElement;
 import openfl.events.EventDispatcher;
 import openfl.events.NetStatusEvent;
 import openfl.media.SoundMixer;
 import openfl.media.SoundTransform;
+#if (js && html5)
+import js.html.VideoElement;
+import js.Browser;
+#end
 
 /**
 	The NetStream class opens a one-way streaming channel over a
@@ -1142,7 +1144,7 @@ class NetStream extends EventDispatcher
 	@:noCompletion private var __connection:NetConnection;
 	@:noCompletion private var __soundTransform:SoundTransform;
 	@:noCompletion private var __timer:Timer;
-	#if openfl_html5
+	#if (js && html5)
 	@:noCompletion @:isVar private var __seeking(get, set):Bool;
 	@:noCompletion private var __video(default, null):VideoElement;
 	#end
@@ -1210,7 +1212,7 @@ class NetStream extends EventDispatcher
 		__connection = connection;
 		__soundTransform = new SoundTransform();
 
-		#if openfl_html5
+		#if (js && html5)
 		__video = cast Browser.document.createElement("video");
 
 		__video.setAttribute("playsinline", "");
@@ -1442,7 +1444,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function close():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		__closed = true;
@@ -1463,7 +1465,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function dispose():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		close();
 		__video = null;
 		#end
@@ -1532,7 +1534,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function pause():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video != null) __video.pause();
 		#end
 	}
@@ -1613,13 +1615,20 @@ class NetStream extends EventDispatcher
 					  with digital rights management (DRM). The value of the
 					  `code` property is `"DRM.encryptedFLV"`.
 	**/
-	public function play(url:String, p1 = null, p2 = null, p3 = null, p4 = null, p5 = null):Void
+	public function play(url:#if (openfl_html5 && !openfl_doc_gen) Dynamic #else String #end, p1 = null, p2 = null, p3 = null, p4 = null, p5 = null):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		__video.volume = SoundMixer.__soundTransform.volume * __soundTransform.volume;
-		__video.src = url;
+		if (Std.is(url, String))
+		{
+			__video.src = url;
+		}
+		else
+		{
+			__video.srcObject = cast url;
+		}
 		__video.play();
 		#end
 	}
@@ -1868,7 +1877,7 @@ class NetStream extends EventDispatcher
 	@:dox(hide) @:noCompletion @SuppressWarnings("checkstyle:FieldDocComment")
 	public function requestVideoStatus():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		if (__timer == null)
@@ -1899,7 +1908,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function resume():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video != null) __video.play();
 		#end
 	}
@@ -1981,7 +1990,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function seek(time:Float):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		if (time < 0)
@@ -2097,7 +2106,7 @@ class NetStream extends EventDispatcher
 	**/
 	public function togglePause():Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		if (__video.paused)
@@ -2113,7 +2122,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function __playStatus(code:String):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		if (client != null)
@@ -2165,7 +2174,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function video_onLoadMetaData(event:Dynamic):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		if (client != null)
@@ -2214,7 +2223,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function video_onTimeUpdate(event:Dynamic):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__video == null) return;
 
 		time = __video.currentTime;
@@ -2254,7 +2263,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function get_speed():Float
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return __video != null ? __video.playbackRate : 1;
 		#else
 		return 1;
@@ -2263,7 +2272,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function set_speed(value:Float):Float
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return __video != null ? __video.playbackRate = value : value;
 		#else
 		return value;
@@ -2272,7 +2281,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function get___seeking():Bool
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return __seeking || __video.seeking;
 		#else
 		return false;
@@ -2281,7 +2290,7 @@ class NetStream extends EventDispatcher
 
 	@:noCompletion private function set___seeking(value:Bool):Bool
 	{
-		#if openfl_html5
+		#if (js && html5)
 		return __seeking = value;
 		#else
 		return value;

@@ -1,17 +1,16 @@
 package openfl._internal.renderer.canvas;
 
-#if openfl_html5
 import openfl.display.BitmapData;
 import openfl.display.BlendMode;
+import openfl.display.CanvasRenderer;
 import openfl.display.TileContainer;
 import openfl.display.Tilemap;
 import openfl.display.Tileset;
 import openfl.geom.Matrix;
 import openfl.geom.Rectangle;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.ImageCanvasUtil;
-#else
-import openfl._internal.backend.lime.ImageCanvasUtil;
+#if lime
+// TODO: Avoid use of private APIs
+import lime._internal.graphics.ImageCanvasUtil;
 #end
 
 @:access(lime.graphics.ImageBuffer)
@@ -27,7 +26,7 @@ class CanvasTilemap
 {
 	public static inline function render(tilemap:Tilemap, renderer:CanvasRenderer):Void
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (!tilemap.__renderable || tilemap.__group.__tiles.length == 0) return;
 
 		var alpha = renderer.__getAlpha(tilemap.__worldAlpha);
@@ -67,7 +66,7 @@ class CanvasTilemap
 			alphaEnabled:Bool, worldAlpha:Float, blendModeEnabled:Bool, defaultBlendMode:BlendMode, cacheBitmapData:BitmapData, source:Dynamic,
 			rect:Rectangle):Void
 	{
-		#if (lime && openfl_html5)
+		#if (js && html5)
 		var context = renderer.context;
 		var roundPixels = renderer.__roundPixels;
 
@@ -168,4 +167,3 @@ class CanvasTilemap
 		#end
 	}
 }
-#end

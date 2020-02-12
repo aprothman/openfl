@@ -1,16 +1,14 @@
 package openfl.filters;
 
 #if !flash
-import openfl._internal.backend.math.RGBA;
 import openfl.display.BitmapData;
 import openfl.display.DisplayObjectRenderer;
 import openfl.display.Shader;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.ImageCanvasUtil;
-#else
-import openfl._internal.backend.lime.ImageCanvasUtil;
+#if lime
+import lime._internal.graphics.ImageCanvasUtil; // TODO
+import lime.math.RGBA;
 #end
 
 /**
@@ -149,11 +147,11 @@ import openfl._internal.backend.lime.ImageCanvasUtil;
 	@:noCompletion private override function __applyFilter(destBitmapData:BitmapData, sourceBitmapData:BitmapData, sourceRect:Rectangle,
 			destPoint:Point):BitmapData
 	{
-		#if (lime || openfl_html5)
+		#if lime
 		var sourceImage = sourceBitmapData.image;
 		var image = destBitmapData.image;
 
-		#if openfl_html5
+		#if (js && html5)
 		ImageCanvasUtil.convertToData(sourceImage);
 		ImageCanvasUtil.convertToData(image);
 		#end
@@ -216,7 +214,7 @@ import openfl._internal.backend.lime.ImageCanvasUtil;
 		return destBitmapData;
 	}
 
-	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int, sourceBitmapData:BitmapData):Shader
+	@:noCompletion private override function __initShader(renderer:DisplayObjectRenderer, pass:Int):Shader
 	{
 		__colorMatrixShader.init(matrix);
 		return __colorMatrixShader;
@@ -274,7 +272,7 @@ private class ColorMatrixShader extends BitmapFilterShader
 	{
 		super();
 
-		#if (!macro && openfl_gl)
+		#if !macro
 		uMultipliers.value = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 		uOffsets.value = [0, 0, 0, 0];
 		#end
@@ -282,7 +280,7 @@ private class ColorMatrixShader extends BitmapFilterShader
 
 	public function init(matrix:Array<Float>):Void
 	{
-		#if (!macro && openfl_gl)
+		#if !macro
 		var multipliers = uMultipliers.value;
 		var offsets = uOffsets.value;
 

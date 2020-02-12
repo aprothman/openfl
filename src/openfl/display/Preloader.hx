@@ -1,12 +1,8 @@
 package openfl.display;
 
-#if lime
 import openfl.events.Event;
 import openfl.events.ProgressEvent;
 import openfl.Lib;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.LimeEvent;
-#end
 
 /**
 	The Preloader class is a Lime Preloader instance that uses an OpenFL
@@ -21,13 +17,7 @@ import openfl._internal.backend.lime_standalone.LimeEvent;
 class Preloader
 {
 	@SuppressWarnings("checkstyle:Dynamic")
-	#if (!lime && openfl_html5)
-	public var onComplete:LimeEvent<Void->Void> = new LimeEvent<Void->Void>();
-	#elseif lime
-	public var onComplete:lime.app.Event<Void->Void> = new lime.app.Event<Void->Void>();
-	#else
-	public var onComplete:Dynamic;
-	#end
+	public var onComplete:#if lime lime.app.Event < Void -> Void >= new lime.app.Event<Void->Void>() #else Dynamic #end;
 
 	@:noCompletion private var complete:Bool;
 	@:noCompletion private var display:Sprite;
@@ -64,7 +54,7 @@ class Preloader
 		}
 		else
 		{
-			#if (lime || openfl_html5)
+			#if lime
 			if (!complete)
 			{
 				complete = true;
@@ -104,7 +94,7 @@ class Preloader
 
 		if (ready)
 		{
-			#if (lime || openfl_html5)
+			#if lime
 			if (!complete)
 			{
 				complete = true;
@@ -171,7 +161,7 @@ class Preloader
 
 	public function getBackgroundColor():Int
 	{
-		var attributes = Lib.current.stage.limeWindow.context.attributes;
+		var attributes = Lib.current.stage.window.context.attributes;
 
 		if (Reflect.hasField(attributes, "background") && attributes.background != null)
 		{
@@ -185,7 +175,7 @@ class Preloader
 
 	public function getHeight():Float
 	{
-		var height = Lib.current.stage.limeWindow.height;
+		var height = Lib.current.stage.window.height;
 
 		if (height > 0)
 		{
@@ -199,7 +189,7 @@ class Preloader
 
 	public function getWidth():Float
 	{
-		var width = Lib.current.stage.limeWindow.width;
+		var width = Lib.current.stage.window.width;
 
 		if (width > 0)
 		{
@@ -281,4 +271,3 @@ class Preloader
 		onUpdate(Std.int(event.bytesLoaded), Std.int(event.bytesTotal));
 	}
 }
-#end

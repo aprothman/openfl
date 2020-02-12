@@ -1,13 +1,11 @@
 package openfl._internal.renderer.canvas;
 
-#if openfl_html5
 import openfl.display.Bitmap;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.ImageCanvasUtil;
-#else
-import openfl._internal.backend.lime.ImageCanvasUtil;
-#end
+import openfl.display.CanvasRenderer;
+#if lime
+import lime._internal.graphics.ImageCanvasUtil; // TODO
 
+#end
 @:access(openfl.display.Bitmap)
 @:access(openfl.display.BitmapData)
 @SuppressWarnings("checkstyle:FieldDocComment")
@@ -15,7 +13,7 @@ class CanvasBitmap
 {
 	public static inline function render(bitmap:Bitmap, renderer:CanvasRenderer):Void
 	{
-		#if (lime && openfl_html5)
+		#if (js && html5)
 		if (!bitmap.__renderable) return;
 
 		var alpha = renderer.__getAlpha(bitmap.__worldAlpha);
@@ -45,15 +43,7 @@ class CanvasBitmap
 			}
 			else
 			{
-				context.save();
-
-				context.beginPath();
-				context.rect(scrollRect.x, scrollRect.y, scrollRect.width, scrollRect.height);
-				context.clip();
-
-				context.drawImage(bitmap.__bitmapData.image.src, 0, 0, bitmap.__bitmapData.image.width, bitmap.__bitmapData.image.height);
-
-				context.restore();
+				context.drawImage(bitmap.__bitmapData.image.src, scrollRect.x, scrollRect.y, scrollRect.width, scrollRect.height);
 			}
 
 			if (!renderer.__allowSmoothing || !bitmap.smoothing)
@@ -66,4 +56,3 @@ class CanvasBitmap
 		#end
 	}
 }
-#end

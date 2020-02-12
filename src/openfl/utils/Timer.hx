@@ -2,10 +2,12 @@ package openfl.utils;
 
 #if !flash
 import haxe.Timer as HaxeTimer;
-import openfl._internal.backend.html5.Browser;
 import openfl.errors.Error;
 import openfl.events.EventDispatcher;
 import openfl.events.TimerEvent;
+#if (js && html5)
+import js.Browser;
+#end
 
 /**
 	The Timer class is the interface to timers, which let you run code on a
@@ -146,7 +148,7 @@ class Timer extends EventDispatcher
 		{
 			running = true;
 
-			#if openfl_html5
+			#if (js && html5)
 			__timerID = Browser.window.setInterval(timer_onTimer, Std.int(__delay));
 			#else
 			__timer = new HaxeTimer(Std.int(__delay));
@@ -165,7 +167,7 @@ class Timer extends EventDispatcher
 	{
 		running = false;
 
-		#if openfl_html5
+		#if (js && html5)
 		if (__timerID != null)
 		{
 			Browser.window.clearInterval(__timerID);

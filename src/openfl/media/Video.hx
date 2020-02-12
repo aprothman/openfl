@@ -2,22 +2,26 @@ package openfl.media;
 
 #if !flash
 import openfl._internal.backend.gl.GLBuffer;
-import openfl._internal.backend.utils.Float32Array;
-import openfl._internal.backend.utils.UInt16Array;
+import openfl._internal.renderer.canvas.CanvasVideo;
+import openfl._internal.renderer.dom.DOMVideo;
+import openfl._internal.renderer.context3D.Context3DVideo;
+import openfl._internal.utils.Float32Array;
+import openfl._internal.utils.UInt16Array;
 import openfl.display3D.textures.RectangleTexture;
 import openfl.display3D.Context3D;
 import openfl.display3D.IndexBuffer3D;
 import openfl.display3D.VertexBuffer3D;
+import openfl.display.CanvasRenderer;
 import openfl.display.DisplayObject;
+import openfl.display.DOMRenderer;
+import openfl.display.OpenGLRenderer;
 import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
 import openfl.net.NetStream;
-#if (!lime && openfl_html5)
-import openfl._internal.backend.lime_standalone.RenderContext;
-#else
-import openfl._internal.backend.lime.RenderContext;
+#if lime
+import lime.graphics.RenderContext;
 #end
 
 /**
@@ -165,24 +169,21 @@ class Video extends DisplayObject
 	@:noCompletion private var __buffer:GLBuffer;
 	@:noCompletion private var __bufferAlpha:Float;
 	@:noCompletion private var __bufferColorTransform:ColorTransform;
+	@:noCompletion private var __bufferContext:RenderContext;
 	@:noCompletion private var __bufferData:Float32Array;
 	@:noCompletion private var __dirty:Bool;
 	@:noCompletion private var __height:Float;
 	@:noCompletion private var __indexBuffer:IndexBuffer3D;
+	@:noCompletion private var __indexBufferContext:RenderContext;
 	@:noCompletion private var __indexBufferData:UInt16Array;
 	@:noCompletion private var __stream:NetStream;
 	@:noCompletion private var __texture:RectangleTexture;
 	@:noCompletion private var __textureTime:Float;
 	@:noCompletion private var __uvRect:Rectangle;
 	@:noCompletion private var __vertexBuffer:VertexBuffer3D;
+	@:noCompletion private var __vertexBufferContext:RenderContext;
 	@:noCompletion private var __vertexBufferData:Float32Array;
 	@:noCompletion private var __width:Float;
-
-	#if (lime || openfl_html5)
-	@:noCompletion private var __bufferContext:RenderContext;
-	@:noCompletion private var __indexBufferContext:RenderContext;
-	@:noCompletion private var __vertexBufferContext:RenderContext;
-	#end
 
 	#if openfljs
 	@:noCompletion private static function __init__()
@@ -211,8 +212,6 @@ class Video extends DisplayObject
 	public function new(width:Int = 320, height:Int = 240):Void
 	{
 		super();
-
-		__type = VIDEO;
 
 		__width = width;
 		__height = height;
@@ -259,7 +258,7 @@ class Video extends DisplayObject
 	{
 		__stream = netStream;
 
-		#if openfl_html5
+		#if (js && html5)
 		if (__stream != null && __stream.__video != null && !__stream.__closed)
 		{
 			__stream.__video.play();
@@ -276,6 +275,16 @@ class Video extends DisplayObject
 	**/
 	public function clear():Void {}
 
+	@:noCompletion private override function __enterFrame(deltaTime:Int):Void
+	{
+		#if (js && html5)
+		if (__renderable && __stream != null)
+		{
+			__setRenderDirty();
+		}
+		#end
+	}
+
 	@:noCompletion private override function __getBounds(rect:Rectangle, matrix:Matrix):Void
 	{
 		var bounds = Rectangle.__pool.get();
@@ -289,7 +298,6 @@ class Video extends DisplayObject
 
 	@:noCompletion private function __getIndexBuffer(context:Context3D):IndexBuffer3D
 	{
-		#if (lime && openfl_gl)
 		var gl = context.gl;
 
 		if (__indexBuffer == null || __indexBufferContext != context.__context)
@@ -310,14 +318,11 @@ class Video extends DisplayObject
 		}
 
 		return __indexBuffer;
-		#else
-		return null;
-		#end
 	}
 
 	@:noCompletion private function __getTexture(context:Context3D):RectangleTexture
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__stream == null || __stream.__video == null) return null;
 
 		var gl = context.__context.webgl;
@@ -345,7 +350,6 @@ class Video extends DisplayObject
 
 	@:noCompletion private function __getVertexBuffer(context:Context3D):VertexBuffer3D
 	{
-		#if (lime && openfl_gl)
 		var gl = context.gl;
 
 		if (__vertexBuffer == null || __vertexBufferContext != context.__context)
@@ -388,9 +392,6 @@ class Video extends DisplayObject
 		}
 
 		return __vertexBuffer;
-		#else
-		return null;
-		#end
 	}
 
 	@:noCompletion private override function __hitTest(x:Float, y:Float, shapeFlag:Bool, stack:Array<DisplayObject>, interactiveOnly:Bool,
@@ -430,6 +431,29 @@ class Video extends DisplayObject
 		return hit;
 	}
 
+	@:noCompletion private override function __renderCanvas(renderer:CanvasRenderer):Void
+	{
+		CanvasVideo.render(this, renderer);
+		__renderEvent(renderer);
+	}
+
+	@:noCompletion private override function __renderDOM(renderer:DOMRenderer):Void
+	{
+		DOMVideo.render(this, renderer);
+		__renderEvent(renderer);
+	}
+
+	@:noCompletion private override function __renderGL(renderer:OpenGLRenderer):Void
+	{
+		Context3DVideo.render(this, renderer);
+		__renderEvent(renderer);
+	}
+
+	@:noCompletion private override function __renderGLMask(renderer:OpenGLRenderer):Void
+	{
+		Context3DVideo.renderMask(this, renderer);
+	}
+
 	// Get & Set Methods
 	@:noCompletion private override function get_height():Float
 	{
@@ -441,7 +465,6 @@ class Video extends DisplayObject
 		if (scaleY != 1 || value != __height)
 		{
 			__setTransformDirty();
-			__setParentRenderDirty();
 			__dirty = true;
 		}
 
@@ -451,7 +474,7 @@ class Video extends DisplayObject
 
 	@:noCompletion private function get_videoHeight():Int
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__stream != null && __stream.__video != null)
 		{
 			return Std.int(__stream.__video.videoHeight);
@@ -463,7 +486,7 @@ class Video extends DisplayObject
 
 	@:noCompletion private function get_videoWidth():Int
 	{
-		#if openfl_html5
+		#if (js && html5)
 		if (__stream != null && __stream.__video != null)
 		{
 			return Std.int(__stream.__video.videoWidth);
@@ -483,7 +506,6 @@ class Video extends DisplayObject
 		if (__scaleX != 1 || __width != value)
 		{
 			__setTransformDirty();
-			__setParentRenderDirty();
 			__dirty = true;
 		}
 
