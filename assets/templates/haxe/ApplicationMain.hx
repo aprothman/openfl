@@ -164,7 +164,6 @@ class ApplicationMain
 		_app.preloader.onComplete.add(function() {
 			trace("ApplicationMain: calling openfl.display.Preloader.start");
 			@:privateAccess preloader.start();
-			trace("ApplicationMain: openfl.display.Preloader.start called");
 		});
 
 		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
@@ -180,7 +179,6 @@ class ApplicationMain
 		}
 
 		_app.preloader.load();
-		trace("ApplicationMain: preload got to end of function");
 	}
 
 	public static function start(stage:openfl.display.Stage):Void {
