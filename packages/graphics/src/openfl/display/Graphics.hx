@@ -121,7 +121,8 @@ import js.html.CanvasRenderingContext2D;
 		{
 			alphas = [];
 
-			for (i in 0...colors.length)
+			var i:Int = colors.length;
+			while (i-- > 0)
 			{
 				alphas.push(1);
 			}
@@ -131,7 +132,8 @@ import js.html.CanvasRenderingContext2D;
 		{
 			ratios = [];
 
-			for (i in 0...colors.length)
+			var i:Int = -1;
+			while (i++ < colors.length - 1)
 			{
 				ratios.push(Math.ceil((i / colors.length) * 255));
 			}
@@ -141,9 +143,10 @@ import js.html.CanvasRenderingContext2D;
 
 		__commands.beginGradientFill(type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio);
 
-		for (alpha in alphas)
+		var i:Int = alphas.length;
+		while (i-- > 0)
 		{
-			if (alpha > 0)
+			if (alphas[i] > 0)
 			{
 				__visible = true;
 				break;
@@ -350,8 +353,10 @@ import js.html.CanvasRenderingContext2D;
 		var trianglePath:GraphicsTrianglePath;
 		var quadPath:GraphicsQuadPath;
 
-		for (graphics in graphicsData)
+		var i:Int = -1;
+		while (i++ < graphicsData.length - 1)
 		{
+			var graphics = graphicsData[i];
 			switch (graphics.__graphicsDataType)
 			{
 				case SOLID:
@@ -433,9 +438,10 @@ import js.html.CanvasRenderingContext2D;
 
 		if (winding == GraphicsPathWinding.NON_ZERO) __commands.windingNonZero();
 
-		for (command in commands)
+		var i:Int = -1;
+		while (i++ < commands.length - 1)
 		{
-			switch (command)
+			switch (commands[i])
 			{
 				case GraphicsPathCommand.MOVE_TO:
 					moveTo(data[dataIndex], data[dataIndex + 1]);
@@ -508,7 +514,8 @@ import js.html.CanvasRenderingContext2D;
 
 		var ri, ti;
 
-		for (i in 0...length)
+		var i:Int = -1;
+		while (i++ < length - 1)
 		{
 			ri = (hasIndices ? (indices[i] * 4) : i * 4);
 			if (ri < 0) continue;
@@ -656,7 +663,8 @@ import js.html.CanvasRenderingContext2D;
 
 			indices = new Vector<Int>();
 
-			for (i in 0...vertLength)
+			var i:Int = -1;
+			while (i++ < vertLength - 1)
 			{
 				indices.push(i);
 			}
@@ -673,7 +681,8 @@ import js.html.CanvasRenderingContext2D;
 		var maxX = Math.NEGATIVE_INFINITY;
 		var maxY = Math.NEGATIVE_INFINITY;
 
-		for (i in 0...vertLength)
+		var i:Int = -1;
+		while (i++ < vertLength - 1)
 		{
 			x = vertices[i * 2];
 			y = vertices[i * 2 + 1];
@@ -887,8 +896,10 @@ import js.html.CanvasRenderingContext2D;
 		var data = new DrawCommandReader(__commands);
 		var path = null, stroke;
 
-		for (type in __commands.types)
+		var i:Int = -1;
+		while (i++ < __commands.types.length - 1)
 		{
+			var type = __commands.types[i];
 			switch (type)
 			{
 				case CUBIC_CURVE_TO, CURVE_TO, LINE_TO, MOVE_TO, DRAW_CIRCLE, DRAW_ELLIPSE, DRAW_RECT, DRAW_ROUND_RECT:

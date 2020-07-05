@@ -174,8 +174,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 	public function getChildByName(name:String):DisplayObject
 	{
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
+			var child = __children[i];
 			if (child.name == name) return child;
 		}
 
@@ -184,7 +186,8 @@ class DisplayObjectContainer extends InteractiveObject
 
 	public function getChildIndex(child:DisplayObject):Int
 	{
-		for (i in 0...__children.length)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
 			if (__children[i] == child) return i;
 		}
@@ -276,8 +279,10 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		if (__children == null) return null;
 
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
+			var child = __children[i];
 			if (child.name == fieldName)
 			{
 				return child;
@@ -328,9 +333,10 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		super.__cleanup();
 
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
-			child.__cleanup();
+			__children[i].__cleanup();
 		}
 
 		__cleanupRemovedChildren();
@@ -338,8 +344,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private inline function __cleanupRemovedChildren():Void
 	{
-		for (orphan in __removedChildren)
+		var i:Int = __removedChildren.length;
+		while (i-- > 0)
 		{
+			var orphan = __removedChildren[i];
 			if (orphan.stage == null)
 			{
 				orphan.__cleanup();
@@ -353,8 +361,10 @@ class DisplayObjectContainer extends InteractiveObject
 	{
 		if (__children != null)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
+				var child = __children[i];
 				event.target = child;
 
 				if (!child.__dispatchWithCapture(event))
@@ -369,9 +379,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __enterFrame(deltaTime:Int):Void
 	{
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__enterFrame(deltaTime);
+			__children[i].__enterFrame(deltaTime);
 		}
 	}
 
@@ -383,8 +394,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
+			var child = __children[i];
 			if (child.__scaleX == 0 || child.__scaleY == 0) continue;
 
 			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
@@ -404,8 +417,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
+			var child = __children[i];
 			if (child.__scaleX == 0 || child.__scaleY == 0 || child.__isMask) continue;
 
 			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
@@ -432,8 +447,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		var childWorldTransform = Matrix.__pool.get();
 
-		for (child in __children)
+		var i:Int = __children.length;
+		while (i-- > 0)
 		{
+			var child = __children[i];
 			if (child.__scaleX == 0 || child.__scaleY == 0 || child.__isMask) continue;
 
 			DisplayObject.__calculateAbsoluteTransform(child.__transform, matrix, childWorldTransform);
@@ -555,9 +572,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (recurse)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__readGraphicsData(graphicsData, recurse);
+				__children[i].__readGraphicsData(graphicsData, recurse);
 			}
 		}
 	}
@@ -577,8 +595,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (renderer.__stage != null)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
+				var child = __children[i];
 				child.__renderCairo(renderer);
 				child.__renderDirty = false;
 			}
@@ -587,9 +607,10 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 		else
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__renderCairo(renderer);
+				__children[i].__renderCairo(renderer);
 			}
 		}
 
@@ -607,9 +628,10 @@ class DisplayObjectContainer extends InteractiveObject
 			CairoGraphics.renderMask(__graphics, renderer);
 		}
 
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__renderCairoMask(renderer);
+			__children[i].__renderCairoMask(renderer);
 		}
 		#end
 	}
@@ -629,8 +651,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (renderer.__stage != null)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
+				var child = __children[i];
 				child.__renderCanvas(renderer);
 				child.__renderDirty = false;
 			}
@@ -639,9 +663,10 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 		else
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__renderCanvas(renderer);
+				__children[i].__renderCanvas(renderer);
 			}
 		}
 
@@ -658,16 +683,19 @@ class DisplayObjectContainer extends InteractiveObject
 			CanvasGraphics.renderMask(__graphics, renderer);
 		}
 
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__renderCanvasMask(renderer);
+			__children[i].__renderCanvasMask(renderer);
 		}
 	}
 
 	@:noCompletion private override function __renderDOM(renderer:DOMRenderer):Void
 	{
-		for (orphan in __removedChildren)
+		var i:Int = -1;
+		while (i++ < __removedChildren.length - 1)
 		{
+			var orphan = __removedChildren[i];
 			if (orphan.stage == null)
 			{
 				orphan.__renderDOM(renderer);
@@ -684,8 +712,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (renderer.__stage != null)
 		{
-			for (child in __children)
+			i = -1;
+			while (i++ < __children.length - 1)
 			{
+				var child = __children[i];
 				child.__renderDOM(renderer);
 				child.__renderDirty = false;
 			}
@@ -694,9 +724,10 @@ class DisplayObjectContainer extends InteractiveObject
 		}
 		else
 		{
-			for (child in __children)
+			i = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__renderDOM(renderer);
+				__children[i].__renderDOM(renderer);
 			}
 		}
 
@@ -705,8 +736,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __renderDOMClear(renderer:DOMRenderer):Void
 	{
-		for (orphan in __removedChildren)
+		var i:Int = -1;
+		while (i++ < __removedChildren.length - 1)
 		{
+			var orphan = __removedChildren[i];
 			if (orphan.stage == null)
 			{
 				orphan.__renderDOMClear(renderer);
@@ -715,9 +748,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		__cleanupRemovedChildren();
 
-		for (child in __children)
+		i = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__renderDOMClear(renderer);
+			__children[i].__renderDOMClear(renderer);
 		}
 	}
 
@@ -738,8 +772,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 			if (renderer.__stage != null)
 			{
-				for (child in __children)
+				var i:Int = -1;
+				while (i++ < __children.length - 1)
 				{
+					var child = __children[i];
 					child.__renderGL(renderer);
 					child.__renderDirty = false;
 				}
@@ -748,9 +784,10 @@ class DisplayObjectContainer extends InteractiveObject
 			}
 			else
 			{
-				for (child in __children)
+				var i:Int = -1;
+				while (i++ < __children.length - 1)
 				{
-					child.__renderGL(renderer);
+					__children[i].__renderGL(renderer);
 				}
 			}
 		}
@@ -772,9 +809,10 @@ class DisplayObjectContainer extends InteractiveObject
 			Context3DShape.renderMask(this, renderer);
 		}
 
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__renderGLMask(renderer);
+			__children[i].__renderGLMask(renderer);
 		}
 	}
 
@@ -784,9 +822,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (__children != null)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__setStageReference(stage);
+			__children[i].__setStageReference(stage);
 			}
 		}
 	}
@@ -799,9 +838,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 			if (__children != null)
 			{
-				for (child in __children)
+				var i:Int = -1;
+				while (i++ < __children.length - 1)
 				{
-					child.__setWorldTransformInvalid();
+					__children[i].__setWorldTransformInvalid();
 				}
 			}
 		}
@@ -815,9 +855,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (__children != null)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				value = child.__shouldCacheHardware(value);
+				value = __children[i].__shouldCacheHardware(value);
 				if (value == true) return true;
 			}
 		}
@@ -827,9 +868,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 	@:noCompletion private override function __stopAllMovieClips():Void
 	{
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
-			child.__stopAllMovieClips();
+			__children[i].__stopAllMovieClips();
 		}
 	}
 
@@ -842,8 +884,10 @@ class DisplayObjectContainer extends InteractiveObject
 		var interactive = false;
 		var interactiveObject:InteractiveObject = null;
 
-		for (child in __children)
+		var i:Int = -1;
+		while (i++ < __children.length - 1)
 		{
+			var child = __children[i];
 			interactive = child.__getInteractive(null);
 
 			if (interactive)
@@ -860,9 +904,10 @@ class DisplayObjectContainer extends InteractiveObject
 
 		if (updateChildren)
 		{
-			for (child in __children)
+			var i:Int = -1;
+			while (i++ < __children.length - 1)
 			{
-				child.__update(transformOnly, true);
+				__children[i].__update(transformOnly, true);
 			}
 		}
 	}

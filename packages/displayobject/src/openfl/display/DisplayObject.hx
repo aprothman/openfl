@@ -581,7 +581,8 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 					i++;
 				}
 
-				for (j in 0...i)
+				var j:Int = -1;
+				while (j++ < i - 1)
 				{
 					stack[i - j - 1].__dispatch(event);
 				}
@@ -618,8 +619,10 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 		{
 			var extension = Rectangle.__pool.get();
 
-			for (filter in __filters)
+			var i:Int = -1;
+			while (i++ < __filters.length - 1)
 			{
+				var filter = __filters[i];
 				extension.__expand(-filter.__leftExtension,
 					-filter.__topExtension, filter.__leftExtension
 					+ filter.__rightExtension,
@@ -1166,9 +1169,10 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 
 			if (hasFilters && !needRender)
 			{
-				for (filter in __filters)
+				var i:Int = -1;
+				while (i++ < __filters.length - 1)
 				{
-					if (filter.__renderDirty)
+					if (__filters[i].__renderDirty)
 					{
 						needRender = true;
 						break;
@@ -1408,12 +1412,13 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 						var needSecondBitmapData = true;
 						var needCopyOfOriginal = false;
 
-						for (filter in __filters)
+						var i:Int = -1;
+						while (i++ < __filters.length - 1)
 						{
 							// if (filter.__needSecondBitmapData) {
 							// 	needSecondBitmapData = true;
 							// }
-							if (filter.__preserveObject)
+							if (__filters[i].__preserveObject)
 							{
 								needCopyOfOriginal = true;
 							}
@@ -1474,17 +1479,21 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 						// var destPoint = __tempPoint;
 						var shader, cacheBitmap;
 
-						for (filter in __filters)
+						
+						i = -1;
+						while (i++ < __filters.length - 1)
 						{
+							var filter = __filters[i];
 							if (filter.__preserveObject)
 							{
 								childRenderer.__setRenderTarget(bitmap3);
 								childRenderer.__renderFilterPass(bitmap, childRenderer.__defaultDisplayShader, filter.__smooth);
 							}
 
-							for (i in 0...filter.__numShaderPasses)
+							var j:Int = -1;
+							while (j++ < filter.__numShaderPasses - 1)
 							{
-								shader = filter.__initShader(childRenderer, i, filter.__preserveObject ? bitmap3 : null);
+								shader = filter.__initShader(childRenderer, j, filter.__preserveObject ? bitmap3 : null);
 								childRenderer.__setBlendMode(filter.__shaderBlendMode);
 								childRenderer.__setRenderTarget(bitmap2);
 								childRenderer.__renderFilterPass(bitmap, shader, filter.__smooth);
@@ -1534,8 +1543,10 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 						var needSecondBitmapData = false;
 						var needCopyOfOriginal = false;
 
-						for (filter in __filters)
+						var i:Int = -1;
+						while (i++ < __filters.length - 1)
 						{
+							var filter = __filters[i];
 							if (filter.__needSecondBitmapData)
 							{
 								needSecondBitmapData = true;
@@ -1590,8 +1601,10 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if (open
 						var destPoint = __tempPoint;
 						var cacheBitmap, lastBitmap;
 
-						for (filter in __filters)
+						i = -1;
+						while (i++ < __filters.length - 1)
 						{
+							var filter = __filters[i];
 							if (filter.__preserveObject)
 							{
 								bitmap3.copyPixels(bitmap, bitmap.rect, destPoint);

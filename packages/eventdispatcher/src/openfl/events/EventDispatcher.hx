@@ -44,15 +44,18 @@ class EventDispatcher implements IEventDispatcher
 		{
 			var list = __eventMap.get(type);
 
-			for (i in 0...list.length)
+			var i:Int = list.length;
+			while (i-- > 0)
 			{
 				if (list[i].match(listener, useCapture)) return;
 			}
 
 			var iterators = __iterators.get(type);
 
-			for (iterator in iterators)
+			i = iterators.length;
+			while (i-- > 0)
 			{
+				var iterator = iterators[i];
 				if (iterator.active)
 				{
 					iterator.copy();
@@ -93,13 +96,15 @@ class EventDispatcher implements IEventDispatcher
 
 		var iterators = __iterators.get(type);
 
-		for (i in 0...list.length)
+		var i:Int = -1;
+		while (i++ < list.length - 1)
 		{
 			if (list[i].match(listener, useCapture))
 			{
-				for (iterator in iterators)
+				var j:Int = -1;
+				while (j++ < iterators.length - 1)
 				{
-					iterator.remove(list[i], i);
+					iterators[j].remove(list[i], i);
 				}
 
 				list.splice(i, 1);
@@ -168,8 +173,10 @@ class EventDispatcher implements IEventDispatcher
 
 		iterator.start();
 
-		for (listener in iterator)
+		var i:Int = -1;
+		while (i++ < list.length)
 		{
+			var listener = list[i];
 			if (listener == null) continue;
 
 			if (listener.useCapture == capture)
@@ -209,7 +216,8 @@ class EventDispatcher implements IEventDispatcher
 		var numElements:Int = list.length;
 		var addAtPosition:Int = numElements;
 
-		for (i in 0...numElements)
+		var i:Int = -1;
+		while (i++ < numElements - 1)
 		{
 			if (list[i].priority < listener.priority)
 			{
@@ -274,7 +282,8 @@ class EventDispatcher implements IEventDispatcher
 			}
 			else
 			{
-				for (i in index...list.length)
+				var i:Int = index;
+				while (i++ < list.length - 1)
 				{
 					if (list[i] == listener)
 					{

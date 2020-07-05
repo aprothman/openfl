@@ -7,6 +7,7 @@ import openfl._internal.utils.Log;
 import openfl._internal.utils.TouchData;
 import openfl.display3D.Context3D;
 import openfl.display.Application as OpenFLApplication;
+import openfl.display.DisplayObject;
 import openfl.errors.IllegalOperationError;
 import openfl.events.Event;
 import openfl.events.EventDispatcher;
@@ -1144,9 +1145,10 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 		if (DisplayObject.__broadcastEvents.exists(event.type))
 		{
 			var dispatchers = DisplayObject.__broadcastEvents.get(event.type);
-
-			for (dispatcher in dispatchers)
+			var n:Int = dispatchers.length;
+			while (n-- > 0)
 			{
+				var dispatcher = dispatchers[n];
 				// TODO: Way to resolve dispatching occurring if object not on stage
 				// and there are multiple stage objects running in HTML5?
 
@@ -1277,7 +1279,8 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 				event.eventPhase = EventPhase.CAPTURING_PHASE;
 				event.target = stack[stack.length - 1];
 
-				for (i in 0...length - 1)
+				var i:Int = -1;
+				while (i++ < length - 1)
 				{
 					stack[i].__dispatch(event);
 
@@ -2531,9 +2534,10 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 			}
 			else
 			{
-				for (target in stack)
+				var i:Int = stack.length;
+				while (i-- > 0)
 				{
-					cursor = target.__getCursor();
+					cursor = stack[i].__getCursor();
 
 					if (cursor != null)
 					{
@@ -2600,8 +2604,10 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 			}
 		}
 
-		for (item in stack)
+		i = -1;
+		while (i++ < stack.length - 1)
 		{
+			var item = stack[i];
 			if (__rollOutStack.indexOf(item) == -1 && __mouseOverTarget != null)
 			{
 				if (item.hasEventListener(MouseEvent.ROLL_OVER))
@@ -2835,8 +2841,10 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 			}
 		}
 
-		for (item in stack)
+		i = -1;
+		while (i++ < stack.length - 1)
 		{
+			item = stack[i];
 			if (touchOutStack.indexOf(item) == -1)
 			{
 				if (item.hasEventListener(TouchEvent.TOUCH_ROLL_OVER))
