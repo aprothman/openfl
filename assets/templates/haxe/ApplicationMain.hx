@@ -105,7 +105,10 @@ class ApplicationMain
 
 			if (_app.window == null) {
 				if (_config != null) {
-					for (field in Reflect.fields(_config)) {
+					var configFields:Array<String> = Reflect.fields(_config);
+					var n:Int = -1;
+					while (++n < configFields.length) {
+						var field = configFields[n];
 						if (Reflect.hasField(attributes, field)) {
 							Reflect.setField(attributes, field, Reflect.field(_config, field));
 						} else if (Reflect.hasField(attributes.context, field)) {
@@ -168,14 +171,18 @@ class ApplicationMain
 
 		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
 
-		for (library in ManifestResources.preloadLibraries) {
+		var preloadLibs = ManifestResources.preloadLibraries;
+		var n:Int = -1;
+		while (++n < preloadLibs.length) {
 			trace("ApplicationMain: _app.preloader.addLibrary called");
-			_app.preloader.addLibrary(library);
+			_app.preloader.addLibrary(preloadLibs[n]);
 		}
 
-		for (name in ManifestResources.preloadLibraryNames) {
+		var preloadLibNames = ManifestResources.preloadLibraryNames;
+		n = -1;
+		while (++n < preloadLibNames.length) {
 			trace("ApplicationMain: _app.preloader.addLibraryName called");
-			_app.preloader.addLibraryName(name);
+			_app.preloader.addLibraryName(preloadLibNames[n]);
 		}
 
 		_app.preloader.load();
