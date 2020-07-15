@@ -1260,6 +1260,7 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 	@SuppressWarnings(["checkstyle:Dynamic", "checkstyle:LeftCurly"])
 	@:noCompletion private function __dispatchStack(event:Event, stack:Array<DisplayObject>):Void
 	{
+		if (event == null) return;
 		#if !openfl_disable_handle_error
 		try
 		{
@@ -1280,8 +1281,9 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 				event.target = stack[stack.length - 1];
 
 				var i:Int = -1;
-				while (i++ < length - 1)
+				while (++i < length)
 				{
+					if (stack[i] == null) break;
 					stack[i].__dispatch(event);
 
 					if (event.__isCanceled)
@@ -1306,6 +1308,7 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 
 					while (i >= 0)
 					{
+						if (stack[i] == null) break;
 						stack[i].__dispatch(event);
 
 						if (event.__isCanceled)
@@ -1320,7 +1323,7 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 
 		#if !openfl_disable_handle_error
 		}
-		catch (e:Dynamic)
+		catch (e)
 		{
 			__handleError(e);
 		}
