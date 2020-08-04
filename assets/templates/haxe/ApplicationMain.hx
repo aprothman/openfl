@@ -288,7 +288,11 @@ class ApplicationMain
 		::else::
 		return macro
 		{
+			#if noPreloader
+			new openfl.display.Preloader();
+			#else
 			new openfl.display.Preloader(new openfl.display.Preloader.DefaultPreloader());
+			#end
 		};
 		::end::
 	}
