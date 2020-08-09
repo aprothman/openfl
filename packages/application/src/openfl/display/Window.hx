@@ -56,7 +56,9 @@ class Window #if lime extends LimeWindow #end
 	@SuppressWarnings("checkstyle:Dynamic")
 	@:noCompletion public override function createFrom(foreignHandle:Int, attributes:RenderContextAttributes):Void
 	{
+		#if lime
 		super.createFrom(foreignHandle, attributes);
+		#end
 
 		finishInit({context: attributes});
 	}

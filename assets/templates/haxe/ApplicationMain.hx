@@ -140,6 +140,11 @@ class ApplicationMain
 	public static function createWindow(attributes:WindowAttributes):openfl.display.Window {
 		trace("ApplicationMain: createWindow called");
 		var curWindow = _app.createWindow(attributes);
+		// if this window has the lowest id of existing windows...
+		if (!_app.__windowByID.exists(curWindow.id - 1)) {
+			// ...it must be the primary, so set focus on it
+			curWindow.focus();
+		}
 		return curWindow;
 	}
 
@@ -149,6 +154,11 @@ class ApplicationMain
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
 		if (frameRate == null) frameRate = ::fps:: == null ? 30 : ::fps::;
 		curWindow.frameRate = frameRate;
+		// if this window has the lowest id of existing windows...
+		if (!_app.__windowByID.exists(curWindow.id - 1)) {
+			// ...it must be the primary, so set focus on it
+			curWindow.focus();
+		}
 		return curWindow;
 	}
 	#end
