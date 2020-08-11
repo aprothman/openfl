@@ -150,7 +150,11 @@ class ApplicationMain
 
 	#if lime
 	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):openfl.display.Window {
-		trace("ApplicationMain: createWindowFrom called");
+		if (_app.window == null) {
+			trace("ApplicationMain: createWindowFrom creating the primary window");
+		} else {
+			trace("ApplicationMain: createWindowFrom creating a secondary window");
+		}
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
 		if (frameRate == null) frameRate = ::fps:: == null ? 30 : ::fps::;
 		curWindow.frameRate = frameRate;
