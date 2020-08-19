@@ -134,17 +134,19 @@ class ApplicationMain
 		preload();
 	}
 
-	public static function createWindow(attributes:WindowAttributes):Void {
+	public static function createWindow(attributes:WindowAttributes):openfl.display.Window {
 		trace("ApplicationMain: createWindow called");
-		_app.createWindow(attributes);
+		var curWindow = _app.createWindow(attributes);
+		return curWindow;
 	}
 
 	#if lime
-	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):Void {
+	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):openfl.display.Window {
 		trace("ApplicationMain: createWindowFrom called");
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
 		if (frameRate == null) frameRate = ::fps:: == null ? 30 : ::fps::;
 		curWindow.frameRate = frameRate;
+		return curWindow;
 	}
 	#end
 
