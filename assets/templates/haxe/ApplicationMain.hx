@@ -185,7 +185,7 @@ class ApplicationMain
 			@:privateAccess preloader.start();
 		});
 
-		preloader.onComplete.add(start.bind(cast(_app.window, openfl.display.Window).stage));
+		preloader.onComplete.add(start.bind((cast _app.window:openfl.display.Window).stage));
 
 		var preloadLibs = ManifestResources.preloadLibraries;
 		var n:Int = -1;
