@@ -150,7 +150,8 @@ class ApplicationMain
 
 	#if lime
 	public static function createWindowFrom(foreignHandle:Int, ?contextAttributes:RenderContextAttributes, ?frameRate:Int):openfl.display.Window {
-		if (_app.window == null) {
+		var isPrimary:Bool = (_app.window == null);
+		if (isPrimary) {
 			trace("ApplicationMain: createWindowFrom creating the primary window");
 		} else {
 			trace("ApplicationMain: createWindowFrom creating a secondary window");
@@ -158,11 +159,12 @@ class ApplicationMain
 		var curWindow = _app.createWindowFrom(foreignHandle, contextAttributes);
 		if (frameRate == null) frameRate = ::fps:: == null ? 30 : ::fps::;
 		curWindow.frameRate = frameRate;
-		// if this window has the lowest id of existing windows...
-		if (!_app.__windowByID.exists(curWindow.id - 1)) {
+		if (isPrimary) {
 			// ...it must be the primary, so set focus on it
+			trace('ApplicationMain: createWindowFrom - Window is primary, so give it focus');
 			curWindow.focus();
 		}
+		
 		return curWindow;
 	}
 	#end
