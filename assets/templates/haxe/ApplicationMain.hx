@@ -179,7 +179,6 @@ class ApplicationMain
 		trace("ApplicationMain: preload called");
 		var preloader = getPreloader();
 		_app.preloader.onProgress.add (function(loaded, total) {
-			trace("ApplicationMain: calling preloader.update");
 			@:privateAccess preloader.update(loaded, total);
 		});
 		_app.preloader.onComplete.add(function() {
