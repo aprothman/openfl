@@ -1323,7 +1323,7 @@ class Stage extends DisplayObjectContainer #if lime implements IModule #end
 
 		#if !openfl_disable_handle_error
 		}
-		catch (e)
+		catch (e:Dynamic)
 		{
 			__handleError(e);
 		}
