@@ -33,7 +33,7 @@ class Application #if lime extends LimeApplication #end
 		super();
 		#end
 
-		if (Lib.application == null)
+		if (Lib.application == null || Lib.application != this)
 		{
 			Lib.application = this;
 		}
