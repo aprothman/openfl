@@ -50,18 +50,33 @@ class Application #if lime extends LimeApplication #end
 	{
 		var window = new Window(this);
 		window.create(attributes);
+		if (window.id == -1) {
+			@:privateAccess window.__created = false;
+			return null;
+		}
 
 		initWindow(window);
 
 		return window;
 	}
 
-	public override function createWindowFrom(foreignHandle:Int, attributes:RenderContextAttributes):Window
+	public override function createWindowFrom(foreignHandle:Int, attributes:RenderContextAttributes, maxTries:Int = 5):Window
 	{
 		var window = new Window(this);
-		window.createFrom(foreignHandle, attributes);
-
-		initWindow(window);
+		var tries:Int = 0;
+		while (tries < maxTries) {
+			window.createFrom(foreignHandle, attributes);
+			if (window.id != -1) break;
+			tries++;
+		}
+		if (window.id == -1) {
+			//... Pump some helpful error here. Just a trace for now.
+			trace('Could not create window');
+			@:privateAccess window.__created = false;
+			return null;
+		} else {
+			initWindow(window);
+		}
 
 		return window;
 	}
